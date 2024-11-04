@@ -21,11 +21,4 @@ export default class ComponentHead extends Component {
   static isComponent(el: HTMLElement) {
     return toLowerCase(el.tagName) === type;
   }
-
-  toJSON(): ComponentDefinition {
-    return {
-      ...super.toJSON(),
-      droppable: (({ tagName }) => !tagName || droppable.includes(toLowerCase(tagName))) as DraggableDroppableFn,
-    };
-  }
 }
