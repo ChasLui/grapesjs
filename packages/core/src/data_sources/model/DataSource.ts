@@ -38,11 +38,10 @@ import DataRecords from './DataRecords';
 import DataSources from './DataSources';
 
 interface DataSourceOptions extends CombinedModelConstructorOptions<{ em: EditorModel }, DataSource> {}
-type Record<DS extends DataSourceType> = SingleRecordType<DS['records']>;
 
 export default class DataSource<
   DS extends DataSourceType = DataSourceType,
-  DR extends Record<DS> = Record<DS>,
+  DR extends SingleRecordType<DS['records']> = SingleRecordType<DS['records']>,
 > extends Model<DS> {
   transformers: DataSourceTransformers;
 
