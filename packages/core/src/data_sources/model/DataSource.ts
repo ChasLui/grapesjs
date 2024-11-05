@@ -40,7 +40,10 @@ import DataSources from './DataSources';
 interface DataSourceOptions extends CombinedModelConstructorOptions<{ em: EditorModel }, DataSource> {}
 type Record<DS extends DataSourceType> = SingleRecordType<DS['records']>;
 
-export default class DataSource<DS extends DataSourceType = DataSourceType> extends Model<DS> {
+export default class DataSource<
+  DS extends DataSourceType = DataSourceType,
+  DR extends Record<DS> = Record<DS>,
+> extends Model<DS> {
   transformers: DataSourceTransformers;
 
   /**
@@ -67,11 +70,13 @@ export default class DataSource<DS extends DataSourceType = DataSourceType> exte
    * @name constructor
    */
   constructor(props: DataSourceProps<DS>, opts: DataSourceOptions) {
-    const pr = {
-      ...props,
-      records: [],
-    } as unknown as DS;
-    super(pr, opts);
+    super(
+      {
+        ...props,
+        records: [],
+      } as unknown as DS,
+      opts,
+    );
     const { records, transformers } = props;
     this.transformers = transformers || {};
 
@@ -123,7 +128,7 @@ export default class DataSource<DS extends DataSourceType = DataSourceType> exte
    * @returns {DataRecord} The added data record.
    * @name addRecord
    */
-  addRecord(record: Record<DS>, opts?: AddOptions) {
+  addRecord(record: DR, opts?: AddOptions) {
     return this.records.add(record, opts);
   }
 
@@ -135,7 +140,7 @@ export default class DataSource<DS extends DataSourceType = DataSourceType> exte
    * @name getRecord
    */
   getRecord(id: string | number) {
-    return this.records.get(id) as Record<DS> | undefined;
+    return this.records.get(id) as DR | undefined;
   }
 
   /**
@@ -173,7 +178,7 @@ export default class DataSource<DS extends DataSourceType = DataSourceType> exte
    * @returns {Array<DataRecord>} An array of the added data records.
    * @name setRecords
    */
-  setRecords(records: Record<DS>[]) {
+  setRecords(records: DR[]) {
     this.records.reset([], { silent: true });
 
     records.forEach((record) => {
