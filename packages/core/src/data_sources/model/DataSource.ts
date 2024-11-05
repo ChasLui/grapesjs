@@ -31,14 +31,18 @@
 
 import { AddOptions, collectionEvents, CombinedModelConstructorOptions, Model, RemoveOptions } from '../../common';
 import EditorModel from '../../editor/model/Editor';
-import { DataRecordProps, DataSourceProps, DataSourceTransformers } from '../types';
+import { DataSourceProps } from '../types';
+import { DataSourceTransformers, DataSourceType, SingleRecordType } from '../types';
 import DataRecord from './DataRecord';
 import DataRecords from './DataRecords';
 import DataSources from './DataSources';
 
 interface DataSourceOptions extends CombinedModelConstructorOptions<{ em: EditorModel }, DataSource> {}
 
-export default class DataSource<DS extends DataSourceProps = DataSourceProps> extends Model<DS> {
+export default class DataSource<
+  DS extends DataSourceType = DataSourceType,
+  DR extends SingleRecordType<DS['records']> = SingleRecordType<DS['records']>,
+> extends Model<DS> {
   transformers: DataSourceTransformers;
 
   /**
@@ -64,8 +68,14 @@ export default class DataSource<DS extends DataSourceProps = DataSourceProps> ex
    * @param {DataSourceOptions} opts - Options to initialize the data source.
    * @name constructor
    */
-  constructor(props: DS, opts: DataSourceOptions) {
-    super(props, opts);
+  constructor(props: DataSourceProps<DS>, opts: DataSourceOptions) {
+    super(
+      {
+        ...props,
+        records: [],
+      } as unknown as DS,
+      opts,
+    );
     const { records, transformers } = props;
     this.transformers = transformers || {};
 
@@ -84,7 +94,7 @@ export default class DataSource<DS extends DataSourceProps = DataSourceProps> ex
    * @name records
    */
   get records() {
-    return this.attributes.records as NonNullable<DS['_records']>;
+    return this.attributes.records as NonNullable<DS['records']>;
   }
 
   /**
@@ -117,7 +127,7 @@ export default class DataSource<DS extends DataSourceProps = DataSourceProps> ex
    * @returns {DataRecord} The added data record.
    * @name addRecord
    */
-  addRecord<T extends DataRecordProps = DataRecordProps>(record: T, opts?: AddOptions) {
+  addRecord(record: DR, opts?: AddOptions) {
     return this.records.add(record, opts);
   }
 
@@ -128,8 +138,8 @@ export default class DataSource<DS extends DataSourceProps = DataSourceProps> ex
    * @returns {DataRecord | undefined} The data record, or `undefined` if no record is found with the given ID.
    * @name getRecord
    */
-  getRecord<T extends DataRecordProps = DataRecordProps>(id: string | number) {
-    return this.records.get(id) as DataRecord<T> | undefined;
+  getRecord(id: string | number) {
+    return this.records.get(id) as DR | undefined;
   }
 
   /**
@@ -139,8 +149,8 @@ export default class DataSource<DS extends DataSourceProps = DataSourceProps> ex
    * @returns {Array<DataRecord | undefined>} An array of data records.
    * @name getRecords
    */
-  getRecords<T extends DataRecordProps = DataRecordProps>() {
-    return [...this.records.models].map((record) => this.getRecord<T>(record.id)!);
+  getRecords() {
+    return [...this.records.models].map((record) => this.getRecord(record.id)!);
   }
 
   /**
@@ -167,7 +177,7 @@ export default class DataSource<DS extends DataSourceProps = DataSourceProps> ex
    * @returns {Array<DataRecord>} An array of the added data records.
    * @name setRecords
    */
-  setRecords<T extends DataRecordProps = DataRecordProps>(records: T[]) {
+  setRecords(records: DR[]) {
     this.records.reset([], { silent: true });
 
     records.forEach((record) => {

@@ -1,4 +1,4 @@
-import { ObjectAny } from '../common';
+import { Collection, ObjectAny } from '../common';
 import ComponentDataVariable from './model/ComponentDataVariable';
 import DataRecord from './model/DataRecord';
 import DataRecords from './model/DataRecords';
@@ -24,16 +24,11 @@ export interface DataVariableListener {
   event: string;
 }
 
-export interface DataSourceProps<DR extends DataRecordProps = DataRecordProps> {
+interface BaseDataSource {
   /**
    * DataSource id.
    */
   id: string;
-
-  /**
-   * DataSource records.
-   */
-  records?: DataRecords<DR> | DataRecord<DR>[] | DR[];
 
   /**
    * DataSource validation and transformation factories.
@@ -44,10 +39,15 @@ export interface DataSourceProps<DR extends DataRecordProps = DataRecordProps> {
    * If true will store the data source in the GrapesJS project.json file.
    */
   skipFromStorage?: boolean;
-
-  // for TS
-  _records?: DataRecords<DR>;
 }
+export interface DataSourceType<DR extends DataRecordProps = DataRecordProps> extends BaseDataSource {
+  records: DataRecords<DR>;
+}
+export interface DataSourceProps<DS extends DataSourceType = DataSourceType> extends BaseDataSource {
+  records?: DataRecords<ExtractRecordType<DS>> | DataRecord<ExtractRecordType<DS>>[] | ExtractRecordType<DS>[];
+}
+export type ExtractRecordType<T> = T extends { records: DataRecords<infer DR> } ? DR : never;
+export type SingleRecordType<T> = T extends Collection<infer U> ? U : never;
 
 export interface DataSourceTransformers {
   onRecordSetValue?: (args: { id: string | number; key: string; value: any }) => any;
