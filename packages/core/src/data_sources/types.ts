@@ -24,7 +24,7 @@ export interface DataVariableListener {
   event: string;
 }
 
-export interface DataSourceProps {
+export interface DataSourceProps<DR extends DataRecordProps = DataRecordProps> {
   /**
    * DataSource id.
    */
@@ -33,7 +33,7 @@ export interface DataSourceProps {
   /**
    * DataSource records.
    */
-  records?: DataRecords | DataRecord[] | DataRecordProps[];
+  records?: DataRecords<DR> | DataRecord<DR>[] | DR[];
 
   /**
    * DataSource validation and transformation factories.
@@ -44,6 +44,9 @@ export interface DataSourceProps {
    * If true will store the data source in the GrapesJS project.json file.
    */
   skipFromStorage?: boolean;
+
+  // for TS
+  _records?: DataRecords<DR>;
 }
 
 export interface DataSourceTransformers {
