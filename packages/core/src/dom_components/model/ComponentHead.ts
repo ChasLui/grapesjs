@@ -1,6 +1,6 @@
 import Component from './Component';
 import { toLowerCase } from '../../utils/mixins';
-import { ComponentDefinition, DraggableDroppableFn } from './types';
+import { DraggableDroppableFn } from './types';
 
 export const type = 'head';
 const droppable = ['title', 'style', 'base', 'link', 'meta', 'script', 'noscript'];
