@@ -10,40 +10,40 @@ import DataVariable, { DataVariableDefinition } from '../DataVariable';
 import { evaluateVariable, isDataVariable } from '../utils';
 
 export const ConditionalVariableType = 'conditional-variable';
-export type Expression = {
+export type ExpressionDefinition = {
   left: any;
   operator: GenericOperation | StringOperation | NumberOperation;
   right: any;
 };
 
-export type LogicGroup = {
+export type LogicGroupDefinition = {
   logicalOperator: LogicalOperation;
-  statements: (Expression | LogicGroup | boolean)[];
+  statements: (ExpressionDefinition | LogicGroupDefinition | boolean)[];
 };
 
+export type ConditionDefinition = ExpressionDefinition | LogicGroupDefinition | boolean;
 export type ConditionalVariableDefinition = {
   type: typeof ConditionalVariableType;
-  condition: Expression | LogicGroup | boolean;
+  condition: ConditionDefinition;
   ifTrue: any;
   ifFalse: any;
 };
 
-export class DataCondition extends Model {
+type DataConditionType = {
+  type: typeof ConditionalVariableType;
+  condition: Condition;
+  ifTrue: any;
+  ifFalse: any;
+};
+export class DataCondition extends Model<DataConditionType> {
   lastEvaluationResult: boolean;
   private condition: Condition;
   private em: EditorModel;
   private variableListeners: DynamicVariableListenerManager[] = [];
   private _onValueChange?: () => void;
 
-  defaults() {
-    return {
-      type: ConditionalVariableType,
-      condition: false,
-    };
-  }
-
   constructor(
-    condition: Expression | LogicGroup | boolean,
+    condition: ExpressionDefinition | LogicGroupDefinition | boolean,
     public ifTrue: any,
     public ifFalse: any,
     opts: { em: EditorModel; onValueChange?: () => void },
