@@ -1,7 +1,5 @@
-import { Collection, ObjectAny } from '../common';
+import { ObjectAny } from '../common';
 import ComponentDataVariable from './model/ComponentDataVariable';
-import DataRecord from './model/DataRecord';
-import DataRecords from './model/DataRecords';
 import DataVariable, { DataVariableDefinition } from './model/DataVariable';
 import { ConditionalVariableDefinition, DataCondition } from './model/conditional_variables/DataCondition';
 
