@@ -148,7 +148,6 @@ export default class DataSource<DRProps extends DataRecordProps = DataRecordProp
    */
   getRecords() {
     return [...this.records.models].map((record) => this.getRecord(record.id)!);
-    return [...this.records.models].map((record) => this.getRecord(record.id)!);
   }
 
   /**
