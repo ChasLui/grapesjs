@@ -1,7 +1,6 @@
 import DataSourceManager from '../../../src/data_sources';
 import { setupTestEditor } from '../../common';
 import EditorModel from '../../../src/editor/model/Editor';
-import { DataRecord } from '../../../src';
 
 describe('DataSource Immutability', () => {
   let em: EditorModel;
