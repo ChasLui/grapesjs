@@ -52,8 +52,14 @@ export class DataCondition extends Model<DataConditionType> {
       throw new MissingConditionError();
     }
 
-    super();
-    this.condition = new Condition(condition, { em: opts.em });
+    const conditionInstance = new Condition(condition, { em: opts.em });
+    super({
+      type: ConditionalVariableType,
+      condition: conditionInstance,
+      ifTrue,
+      ifFalse,
+    });
+    this.condition = conditionInstance;
     this.em = opts.em;
     this.lastEvaluationResult = this.evaluate();
     this.listenToDataVariables();
