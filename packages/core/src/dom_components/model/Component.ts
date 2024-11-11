@@ -51,14 +51,13 @@ import {
   updateSymbolComps,
   updateSymbolProps,
 } from './SymbolUtils';
-import TraitDataVariable from '../../data_sources/model/TraitDataVariable';
-import { ConditionalVariableType, DataCondition } from '../../data_sources/model/conditional_variables/DataCondition';
-import { isDynamicValue, isDynamicValueDefinition } from '../../data_sources/model/utils';
-import { DynamicValueDefinition } from '../../data_sources/types';
+import { evaluateDynamicValueDefinition, isDynamicValueDefinition } from '../../data_sources/model/utils';
+import { DynamicValue } from '../../data_sources/types';
+import DynamicVariableListenerManager from '../../data_sources/model/DataVariableListenerManager';
 
-export interface IComponent extends ExtractMethods<Component> {}
+export interface IComponent extends ExtractMethods<Component> { }
 
-export interface SetAttrOptions extends SetOptions, UpdateStyleOptions {}
+export interface SetAttrOptions extends SetOptions, UpdateStyleOptions { }
 
 const escapeRegExp = (str: string) => {
   return str.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&');
@@ -72,7 +71,6 @@ export const keySymbol = '__symbol';
 export const keySymbolOvrd = '__symbol_ovrd';
 export const keyUpdate = ComponentsEvents.update;
 export const keyUpdateInside = ComponentsEvents.updateInside;
-export const dynamicAttrKey = 'attributes-dynamic-value';
 
 /**
  * The Component object represents a single node of our template structure, so when you update its properties the changes are
@@ -225,12 +223,12 @@ export default class Component extends StyleableModel<ComponentProperties> {
     return this.frame?.getPage();
   }
 
-  preInit() {}
+  preInit() { }
 
   /**
    * Hook method, called once the model is created
    */
-  init() {}
+  init() { }
 
   /**
    * Hook method, called when the model has been updated (eg. updated some model's property)
@@ -238,12 +236,12 @@ export default class Component extends StyleableModel<ComponentProperties> {
    * @param {*} value Property value, if triggered after some property update
    * @param {*} previous Property previous value, if triggered after some property update
    */
-  updated(property: string, value: any, previous: any) {}
+  updated(property: string, value: any, previous: any) { }
 
   /**
    * Hook method, called once the model has been removed
    */
-  removed() {}
+  removed() { }
 
   em!: EditorModel;
   opt!: ComponentOptions;
@@ -260,9 +258,21 @@ export default class Component extends StyleableModel<ComponentProperties> {
    * @private
    * @ts-ignore */
   collection!: Components;
+  dynamicVariableListenersOBJ: {
+    attributes: Record<string, DynamicVariableListenerManager>,
+    traits: Record<string, DynamicVariableListenerManager>,
+    props: Record<string, DynamicVariableListenerManager>,
+  } = {
+      attributes: {},
+      traits: {},
+      props: {}
+    };
 
   constructor(props: ComponentProperties = {}, opt: ComponentOptions) {
-    super(props, opt);
+    const { evaluatedProps, propsToWatch, attributesToWatch, traitsToWatch } = evaluatePropsBeforeInstantiation(props, opt.em);
+    super(evaluatedProps, opt);
+
+    this.watchAttributes(attributesToWatch);
     bindAll(this, '__upSymbProps', '__upSymbCls', '__upSymbComps');
     const em = opt.em;
 
@@ -328,6 +338,22 @@ export default class Component extends StyleableModel<ComponentProperties> {
       this.init();
       isSymbol(this) && initSymbol(this);
       em?.trigger(ComponentsEvents.create, this, opt);
+    }
+  }
+
+  private watchAttributes(attributesToWatch: Record<string, DynamicValue>) {
+    const attributesToWatchKeys = Object.keys(attributesToWatch);
+    for (let index = 0; index < attributesToWatchKeys.length; index++) {
+      const key = attributesToWatchKeys[index];
+      const attributeDynamicVariable = attributesToWatch[key];
+
+      this.dynamicVariableListenersOBJ.attributes[key] = new DynamicVariableListenerManager({
+        em: this.em,
+        dataVariable: attributeDynamicVariable,
+        updateValueFromDataVariable: () => {
+          this.setAttributes({ [key]: attributeDynamicVariable.getDataValue() });
+        },
+      });
     }
   }
 
@@ -649,7 +675,16 @@ export default class Component extends StyleableModel<ComponentProperties> {
    * component.setAttributes({ id: 'test', 'data-key': 'value' });
    */
   setAttributes(attrs: ObjectAny, opts: SetAttrOptions = {}) {
+    const attributes = this.dynamicVariableListenersOBJ.attributes;
+    const keys = Object.keys(attributes)
+    keys.forEach(attribute => {
+      this.dynamicVariableListenersOBJ.attributes[attribute].destroy();
+      delete this.dynamicVariableListenersOBJ.attributes[attribute];
+    });
+
     this.set('attributes', { ...attrs }, opts);
+    const { propsToWatch } = evaluatePropsBeforeInstantiation(attrs, this.em);
+    this.watchAttributes(propsToWatch);
     return this;
   }
 
@@ -662,6 +697,9 @@ export default class Component extends StyleableModel<ComponentProperties> {
    * component.addAttributes({ 'data-key': 'value' });
    */
   addAttributes(attrs: ObjectAny, opts: SetAttrOptions = {}) {
+    const { propsToWatch } = evaluatePropsBeforeInstantiation(attrs, this.em);
+    this.watchAttributes(propsToWatch);
+
     return this.setAttributes(
       {
         ...this.getAttributes({ noClass: true }),
@@ -682,6 +720,11 @@ export default class Component extends StyleableModel<ComponentProperties> {
    */
   removeAttributes(attrs: string | string[] = [], opts: SetOptions = {}) {
     const attrArr = Array.isArray(attrs) ? attrs : [attrs];
+    attrArr.forEach(attribute => {
+      this.dynamicVariableListenersOBJ.attributes[attribute].destroy();
+      delete this.dynamicVariableListenersOBJ.attributes[attribute];
+    });
+
     const compAttr = this.getAttributes();
     attrArr.map((i) => delete compAttr[i]);
     return this.setAttributes(compAttr, opts);
@@ -771,29 +814,6 @@ export default class Component extends StyleableModel<ComponentProperties> {
       if (isObject(style) && !isEmptyObj(style)) {
         attributes.style = this.styleToString({ inline: true });
       }
-    }
-
-    const attrDataVariable = this.get(dynamicAttrKey) as {
-      [key: string]: TraitDataVariable | DynamicValueDefinition;
-    };
-    if (attrDataVariable) {
-      Object.entries(attrDataVariable).forEach(([key, value]) => {
-        let dataVariable: TraitDataVariable | DataCondition;
-        if (isDynamicValue(value)) {
-          dataVariable = value;
-        } else if (isDynamicValueDefinition(value)) {
-          const type = value.type;
-
-          if (type === ConditionalVariableType) {
-            const { condition, ifTrue, ifFalse } = value;
-            dataVariable = new DataCondition(condition, ifTrue, ifFalse, { em });
-          } else {
-            dataVariable = new TraitDataVariable(value, { em });
-          }
-        }
-
-        attributes[key] = dataVariable!.getDataValue();
-      });
     }
 
     // Check if we need an ID on the component
@@ -934,7 +954,6 @@ export default class Component extends StyleableModel<ComponentProperties> {
     this.off(event, this.initTraits);
     this.__loadTraits();
     const attrs = { ...this.get('attributes') };
-    const traitDynamicValueAttr: ObjectAny = {};
     const traits = this.traits;
     traits.each((trait) => {
       const name = trait.getName();
@@ -945,13 +964,8 @@ export default class Component extends StyleableModel<ComponentProperties> {
       } else {
         if (name && value) attrs[name] = value;
       }
-
-      if (trait.dynamicVariable) {
-        traitDynamicValueAttr[name] = trait.dynamicVariable;
-      }
     });
     traits.length && this.set('attributes', attrs);
-    Object.keys(traitDynamicValueAttr).length && this.set(dynamicAttrKey, traitDynamicValueAttr);
     this.on(event, this.initTraits);
     changed && em && em.trigger('component:toggled');
     return this;
@@ -1147,7 +1161,6 @@ export default class Component extends StyleableModel<ComponentProperties> {
       traits.setTarget(this);
 
       if (traitsI.length) {
-        traitsI.forEach((tr) => tr.attributes && delete tr.attributes.value);
         traits.add(traitsI);
       }
 
@@ -1558,7 +1571,6 @@ export default class Component extends StyleableModel<ComponentProperties> {
     obj.attributes = this.getAttributes();
     delete obj.attributes.class;
     delete obj.toolbar;
-    delete obj.traits;
     delete obj.status;
     delete obj.open; // used in Layers
     delete obj._undoexc;
@@ -2041,4 +2053,40 @@ export default class Component extends StyleableModel<ComponentProperties> {
       components && Component.checkId(components, styles, list, opts);
     });
   }
+}
+
+function evaluatePropsBeforeInstantiation(props: ComponentProperties, em: EditorModel) {
+  const evaluatedProps = { ...props };
+  const propsKeys = Object.keys(evaluatedProps);
+  const propsToWatch: Record<string, DynamicValue> = {};
+
+  // Props
+  for (let index = 0; index < propsKeys.length; index++) {
+    const key = propsKeys[index];
+    if (!isDynamicValueDefinition(evaluatedProps[key])) continue
+    const { variable, value } = evaluateDynamicValueDefinition(evaluatedProps[key], em);
+    propsToWatch[key] = variable
+
+    evaluatedProps[key] = value;
+  }
+
+  // Attributes
+  let attributesToWatch: Record<string, DynamicValue> = {};
+  let evaluatedAttributes: any = {}
+  if (evaluatedProps.attributes) {
+    ({ evaluatedProps: evaluatedAttributes, propsToWatch: attributesToWatch } = evaluatePropsBeforeInstantiation(evaluatedProps.attributes, em));
+
+    evaluatedProps.attributes = evaluatedAttributes;
+  }
+
+  // Traits
+  let traitsToWatch: Record<string, DynamicValue> = {};
+  let evaluatedTraits: any = {}
+  if (evaluatedProps.traits) {
+    ({ evaluatedProps: evaluatedTraits, propsToWatch: traitsToWatch } = evaluatePropsBeforeInstantiation(evaluatedProps.traits, em));
+
+    evaluatedProps.traits = evaluatedTraits;
+  }
+
+  return { evaluatedProps, propsToWatch, attributesToWatch, traitsToWatch };
 }
