@@ -77,7 +77,6 @@ export default class Trait extends Model<TraitProperties> {
       const dv = this.dynamicVariable.getDataValue();
       this.set({ value: dv });
       this.dynamicVariableListener = new DynamicVariableListenerManager({
-        model: this,
         em: this.em,
         dataVariable: this.dynamicVariable,
         updateValueFromDataVariable: this.updateValueFromDataVariable.bind(this),
@@ -384,6 +383,7 @@ export default class Trait extends Model<TraitProperties> {
   }
 
   getInitValue() {
+    if (this.hasDynamicValue()) return this.getDynamicValue();
     const { component } = this;
     const name = this.getName();
     let value;
