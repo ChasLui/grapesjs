@@ -334,12 +334,16 @@ describe('TraitDataVariable', () => {
 
       let property = cmp.get('test-change-prop');
       expect(property).toBe('I love grapes');
+      expect(cmp.getAttributes()['test-change-prop']).toBe(undefined);
+      expect(cmp.getView()?.el.getAttribute('test-change-prop')).toBeNull();
 
       const testDs = dsm.get(inputDataSource.id);
       testDs.getRecord('id1')?.set({ value: 'I really love grapes' });
 
       property = cmp.get('test-change-prop');
       expect(property).toBe('I really love grapes');
+      expect(cmp.getAttributes()['test-change-prop']).toBe(undefined);
+      expect(cmp.getView()?.el.getAttribute('test-change-prop')).toBeNull();
     });
 
     test('should cover when changeProp trait value is not set', () => {
