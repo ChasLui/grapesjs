@@ -675,16 +675,15 @@ export default class Component extends StyleableModel<ComponentProperties> {
    * component.setAttributes({ id: 'test', 'data-key': 'value' });
    */
   setAttributes(attrs: ObjectAny, opts: SetAttrOptions = {}) {
-    const attributes = this.dynamicVariableListenersOBJ.attributes;
-    const keys = Object.keys(attributes)
-    keys.forEach(attribute => {
+    const { propsToWatch, evaluatedProps } = evaluatePropsBeforeInstantiation(attrs, this.em);
+    const attrArr = Object.keys(this.dynamicVariableListenersOBJ.attributes);
+    attrArr.filter(attribute => attrs[attribute] !== undefined).forEach(attribute => {
       this.dynamicVariableListenersOBJ.attributes[attribute].destroy();
       delete this.dynamicVariableListenersOBJ.attributes[attribute];
     });
-
-    this.set('attributes', { ...attrs }, opts);
-    const { propsToWatch } = evaluatePropsBeforeInstantiation(attrs, this.em);
     this.watchAttributes(propsToWatch);
+    this.set('attributes', { ...evaluatedProps }, opts);
+    
     return this;
   }
 
@@ -697,9 +696,6 @@ export default class Component extends StyleableModel<ComponentProperties> {
    * component.addAttributes({ 'data-key': 'value' });
    */
   addAttributes(attrs: ObjectAny, opts: SetAttrOptions = {}) {
-    const { propsToWatch } = evaluatePropsBeforeInstantiation(attrs, this.em);
-    this.watchAttributes(propsToWatch);
-
     return this.setAttributes(
       {
         ...this.getAttributes({ noClass: true }),

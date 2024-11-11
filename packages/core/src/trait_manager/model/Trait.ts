@@ -383,7 +383,6 @@ export default class Trait extends Model<TraitProperties> {
   }
 
   getInitValue() {
-    if (this.hasDynamicValue()) return this.getDynamicValue();
     const { component } = this;
     const name = this.getName();
     let value;
