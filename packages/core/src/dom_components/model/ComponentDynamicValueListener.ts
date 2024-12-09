@@ -20,10 +20,7 @@ export class ComponentDynamicValueListener {
     }, em);
   }
 
-  static evaluateComponentDef(
-    values: ObjectAny,
-    em: EditorModel,
-  ) {
+  static evaluateComponentDef(values: ObjectAny, em: EditorModel) {
     const props = DynamicValueWatcher.getStaticValues(values, em);
     props.attributes = DynamicValueWatcher.getStaticValues(props.attributes, em);
 
@@ -39,16 +36,24 @@ export class ComponentDynamicValueListener {
     this.propertyWatchClass.watchDynamicValue(props);
   }
 
+  getDynamicPropsDefs() {
+    return this.propertyWatchClass.getAllSerializableValues();
+  }
+
   setAttributes(attributes: ObjectAny) {
     this.attributeWatchClass.removeListeners();
     this.attributeWatchClass.watchDynamicValue(attributes);
   }
 
-  removeAttributes(attrArr: string[]) {
-    this.attributeWatchClass.removeListeners(attrArr);
-  }
-
   watchAttributes(attributes: ObjectAny) {
     this.attributeWatchClass.watchDynamicValue(attributes);
+  }
+
+  removeAttributes(attributes: string[]) {
+    this.attributeWatchClass.removeListeners(attributes);
+  }
+
+  getAttributesDefsOrValues(attributes: ObjectAny) {
+    return this.attributeWatchClass.getSerializableValues(attributes);
   }
 }

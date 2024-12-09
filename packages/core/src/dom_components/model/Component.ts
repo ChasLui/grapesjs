@@ -1560,8 +1560,9 @@ export default class Component extends StyleableModel<ComponentProperties> {
    * @private
    */
   toJSON(opts: ObjectAny = {}): ComponentDefinition {
-    const obj = Model.prototype.toJSON.call(this, opts);
-    obj.attributes = this.getAttributes();
+    let obj = Model.prototype.toJSON.call(this, opts);
+    obj.attributes = this.componentDVListener.getAttributesDefsOrValues(this.getAttributes());
+    obj = { ...obj, ...this.componentDVListener.getDynamicPropsDefs() };
     delete obj.attributes.class;
     delete obj.toolbar;
     delete obj.status;

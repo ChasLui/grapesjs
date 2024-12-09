@@ -16,7 +16,7 @@ export interface DynamicVariableListenerManagerOptions {
 export default class DynamicVariableListenerManager {
   private dataListeners: DataVariableListener[] = [];
   private em: EditorModel;
-  private dynamicVariable: DynamicValue;
+  dynamicVariable: DynamicValue;
   private updateValueFromDynamicVariable: (value: any) => void;
   private model = new Model();
 
