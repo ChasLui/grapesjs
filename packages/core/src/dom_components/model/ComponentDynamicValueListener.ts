@@ -1,5 +1,4 @@
 import { ObjectAny } from '../../common';
-import { evaluateDynamicValueDefinition, isDynamicValueDefinition } from '../../data_sources/model/utils';
 import EditorModel from '../../editor/model/Editor';
 import Component from './Component';
 import { DynamicValueWatcher } from './DynamicValueWatcher';
@@ -22,9 +21,7 @@ export class ComponentDynamicValueListener {
   }
 
   static evaluateComponentDef(
-    values: {
-      [key: string]: any;
-    },
+    values: ObjectAny,
     em: EditorModel,
   ) {
     const props = DynamicValueWatcher.getStaticValues(values, em);
@@ -33,7 +30,7 @@ export class ComponentDynamicValueListener {
     return props;
   }
 
-  watchComponentDef(values: { [key: string]: any }) {
+  watchComponentDef(values: ObjectAny) {
     this.watchProps(values);
     this.watchAttributes(values.attributes);
   }

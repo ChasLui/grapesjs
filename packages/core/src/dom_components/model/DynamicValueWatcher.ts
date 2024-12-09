@@ -1,3 +1,4 @@
+import { ObjectAny } from '../../common';
 import DynamicVariableListenerManager from '../../data_sources/model/DataVariableListenerManager';
 import { evaluateDynamicValueDefinition, isDynamicValueDefinition } from '../../data_sources/model/utils';
 import EditorModel from '../../editor/model/Editor';
@@ -27,13 +28,13 @@ export class DynamicValueWatcher {
     return evaluatedValues;
   }
 
-  static areStaticValues(values: { [key: string]: any }) {
+  static areStaticValues(values: ObjectAny) {
     return Object.keys(values).every((key) => {
       return !isDynamicValueDefinition(values[key]);
     });
   }
 
-  watchDynamicValue(values: { [key: string]: any }) {
+  watchDynamicValue(values: ObjectAny) {
     const dynamicProps = this.getDynamicValues(values);
     const propsKeys = Object.keys(dynamicProps);
     for (let index = 0; index < propsKeys.length; index++) {
@@ -51,7 +52,7 @@ export class DynamicValueWatcher {
     return dynamicProps;
   }
 
-  private getDynamicValues(values: { [key: string]: any }) {
+  private getDynamicValues(values: ObjectAny) {
     const dynamicValues = { ...values };
     const propsKeys = Object.keys(dynamicValues);
     for (let index = 0; index < propsKeys.length; index++) {
