@@ -4,7 +4,7 @@ import { ConditionalVariableType, DataCondition } from './conditional_variables/
 import DataVariable, { DataVariableType } from './DataVariable';
 
 export function isDynamicValueDefinition(value: any): value is DynamicValueDefinition {
-  return typeof value === 'object' && [DataVariableType, ConditionalVariableType].includes(value.type);
+  return typeof value === 'object' && [DataVariableType, ConditionalVariableType].includes(value?.type);
 }
 
 export function isDynamicValue(value: any): value is DynamicValue {

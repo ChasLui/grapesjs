@@ -51,13 +51,12 @@ import {
   updateSymbolComps,
   updateSymbolProps,
 } from './SymbolUtils';
-import { evaluateDynamicValueDefinition, isDynamicValueDefinition } from '../../data_sources/model/utils';
-import { DynamicValue } from '../../data_sources/types';
-import DynamicVariableListenerManager from '../../data_sources/model/DataVariableListenerManager';
+import { ComponentDynamicValueListener } from './ComponentDynamicValueListener';
+import { DynamicValueWatcher } from './DynamicValueWatcher';
 
-export interface IComponent extends ExtractMethods<Component> { }
+export interface IComponent extends ExtractMethods<Component> {}
 
-export interface SetAttrOptions extends SetOptions, UpdateStyleOptions { }
+export interface SetAttrOptions extends SetOptions, UpdateStyleOptions {}
 
 const escapeRegExp = (str: string) => {
   return str.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&');
@@ -223,12 +222,12 @@ export default class Component extends StyleableModel<ComponentProperties> {
     return this.frame?.getPage();
   }
 
-  preInit() { }
+  preInit() {}
 
   /**
    * Hook method, called once the model is created
    */
-  init() { }
+  init() {}
 
   /**
    * Hook method, called when the model has been updated (eg. updated some model's property)
@@ -236,12 +235,12 @@ export default class Component extends StyleableModel<ComponentProperties> {
    * @param {*} value Property value, if triggered after some property update
    * @param {*} previous Property previous value, if triggered after some property update
    */
-  updated(property: string, value: any, previous: any) { }
+  updated(property: string, value: any, previous: any) {}
 
   /**
    * Hook method, called once the model has been removed
    */
-  removed() { }
+  removed() {}
 
   em!: EditorModel;
   opt!: ComponentOptions;
@@ -258,21 +257,14 @@ export default class Component extends StyleableModel<ComponentProperties> {
    * @private
    * @ts-ignore */
   collection!: Components;
-  dynamicVariableListenersOBJ: {
-    attributes: Record<string, DynamicVariableListenerManager>,
-    traits: Record<string, DynamicVariableListenerManager>,
-    props: Record<string, DynamicVariableListenerManager>,
-  } = {
-      attributes: {},
-      traits: {},
-      props: {}
-    };
+  componentDVListener: ComponentDynamicValueListener;
 
   constructor(props: ComponentProperties = {}, opt: ComponentOptions) {
-    const { evaluatedProps, propsToWatch, attributesToWatch, traitsToWatch } = evaluatePropsBeforeInstantiation(props, opt.em);
+    const evaluatedProps = ComponentDynamicValueListener.evaluateComponentDef(props, opt.em);
     super(evaluatedProps, opt);
+    this.componentDVListener = new ComponentDynamicValueListener(this, opt.em);
+    this.componentDVListener.watchComponentDef(props);
 
-    this.watchAttributes(attributesToWatch);
     bindAll(this, '__upSymbProps', '__upSymbCls', '__upSymbComps');
     const em = opt.em;
 
@@ -341,20 +333,28 @@ export default class Component extends StyleableModel<ComponentProperties> {
     }
   }
 
-  private watchAttributes(attributesToWatch: Record<string, DynamicValue>) {
-    const attributesToWatchKeys = Object.keys(attributesToWatch);
-    for (let index = 0; index < attributesToWatchKeys.length; index++) {
-      const key = attributesToWatchKeys[index];
-      const attributeDynamicVariable = attributesToWatch[key];
+  set<A extends string>(attributeName: A, value?: ComponentProperties[A], options?: SetOptions): this;
+  set(attributeName: Partial<ComponentProperties>, options?: SetOptions): this;
+  set<A extends string>(
+    attributeName: Partial<ComponentProperties> | A,
+    value?: SetOptions | ComponentProperties[A],
+    options?: SetOptions,
+  ): this;
+  set<A extends string>(
+    attributeName: Partial<ComponentProperties> | A,
+    value?: SetOptions | ComponentProperties[A],
+    options?: SetOptions,
+  ): this {
+    const props =
+      typeof attributeName === 'object'
+        ? attributeName
+        : typeof attributeName === 'string'
+          ? { [attributeName as string]: value }
+          : {};
+    const evaluatedProps = ComponentDynamicValueListener.evaluateComponentDef(props, this.em);
+    this.componentDVListener?.watchProps(evaluatedProps);
 
-      this.dynamicVariableListenersOBJ.attributes[key] = new DynamicVariableListenerManager({
-        em: this.em,
-        dataVariable: attributeDynamicVariable,
-        updateValueFromDataVariable: () => {
-          this.setAttributes({ [key]: attributeDynamicVariable.getDataValue() });
-        },
-      });
-    }
+    return super.set(evaluatedProps, options);
   }
 
   __postAdd(opts: { recursive?: boolean } = {}) {
@@ -675,15 +675,11 @@ export default class Component extends StyleableModel<ComponentProperties> {
    * component.setAttributes({ id: 'test', 'data-key': 'value' });
    */
   setAttributes(attrs: ObjectAny, opts: SetAttrOptions = {}) {
-    const { propsToWatch, evaluatedProps } = evaluatePropsBeforeInstantiation(attrs, this.em);
-    const attrArr = Object.keys(this.dynamicVariableListenersOBJ.attributes);
-    attrArr.filter(attribute => attrs[attribute] !== undefined).forEach(attribute => {
-      this.dynamicVariableListenersOBJ.attributes[attribute].destroy();
-      delete this.dynamicVariableListenersOBJ.attributes[attribute];
-    });
-    this.watchAttributes(propsToWatch);
-    this.set('attributes', { ...evaluatedProps }, opts);
-    
+    const areStaticAttributes = DynamicValueWatcher.areStaticValues(attrs);
+    const evaluatedAttributes = areStaticAttributes ? attrs : DynamicValueWatcher.getStaticValues(attrs, this.em);
+    this.componentDVListener.setAttributes(attrs);
+    this.set('attributes', evaluatedAttributes, opts);
+
     return this;
   }
 
@@ -696,10 +692,14 @@ export default class Component extends StyleableModel<ComponentProperties> {
    * component.addAttributes({ 'data-key': 'value' });
    */
   addAttributes(attrs: ObjectAny, opts: SetAttrOptions = {}) {
+    const areStaticAttributes = DynamicValueWatcher.areStaticValues(attrs);
+    const evaluatedAttributes = areStaticAttributes ? attrs : DynamicValueWatcher.getStaticValues(attrs, this.em);
+    this.componentDVListener.watchAttributes(attrs);
+
     return this.setAttributes(
       {
         ...this.getAttributes({ noClass: true }),
-        ...attrs,
+        ...evaluatedAttributes,
       },
       opts,
     );
@@ -716,10 +716,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
    */
   removeAttributes(attrs: string | string[] = [], opts: SetOptions = {}) {
     const attrArr = Array.isArray(attrs) ? attrs : [attrs];
-    attrArr.forEach(attribute => {
-      this.dynamicVariableListenersOBJ.attributes[attribute].destroy();
-      delete this.dynamicVariableListenersOBJ.attributes[attribute];
-    });
+    this.componentDVListener.removeAttributes(attrArr);
 
     const compAttr = this.getAttributes();
     attrArr.map((i) => delete compAttr[i]);
@@ -2049,40 +2046,4 @@ export default class Component extends StyleableModel<ComponentProperties> {
       components && Component.checkId(components, styles, list, opts);
     });
   }
-}
-
-function evaluatePropsBeforeInstantiation(props: ComponentProperties, em: EditorModel) {
-  const evaluatedProps = { ...props };
-  const propsKeys = Object.keys(evaluatedProps);
-  const propsToWatch: Record<string, DynamicValue> = {};
-
-  // Props
-  for (let index = 0; index < propsKeys.length; index++) {
-    const key = propsKeys[index];
-    if (!isDynamicValueDefinition(evaluatedProps[key])) continue
-    const { variable, value } = evaluateDynamicValueDefinition(evaluatedProps[key], em);
-    propsToWatch[key] = variable
-
-    evaluatedProps[key] = value;
-  }
-
-  // Attributes
-  let attributesToWatch: Record<string, DynamicValue> = {};
-  let evaluatedAttributes: any = {}
-  if (evaluatedProps.attributes) {
-    ({ evaluatedProps: evaluatedAttributes, propsToWatch: attributesToWatch } = evaluatePropsBeforeInstantiation(evaluatedProps.attributes, em));
-
-    evaluatedProps.attributes = evaluatedAttributes;
-  }
-
-  // Traits
-  let traitsToWatch: Record<string, DynamicValue> = {};
-  let evaluatedTraits: any = {}
-  if (evaluatedProps.traits) {
-    ({ evaluatedProps: evaluatedTraits, propsToWatch: traitsToWatch } = evaluatePropsBeforeInstantiation(evaluatedProps.traits, em));
-
-    evaluatedProps.traits = evaluatedTraits;
-  }
-
-  return { evaluatedProps, propsToWatch, attributesToWatch, traitsToWatch };
 }
