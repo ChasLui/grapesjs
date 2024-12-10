@@ -22,7 +22,9 @@ export class ComponentDynamicValueListener {
 
   static evaluateComponentDef(values: ObjectAny, em: EditorModel) {
     const props = DynamicValueWatcher.getStaticValues(values, em);
-    props.attributes = DynamicValueWatcher.getStaticValues(props.attributes, em);
+    if (values.attributes) {
+      props.attributes = DynamicValueWatcher.getStaticValues(values.attributes, em);
+    }
 
     return props;
   }
