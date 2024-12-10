@@ -10,18 +10,15 @@ export class DynamicValueWatcher {
     private em: EditorModel,
   ) {}
 
-  static getStaticValues(
-    values: {
-      [key: string]: any;
-    },
-    em: EditorModel,
-  ) {
-    const evaluatedValues = { ...values };
-    const propsKeys = Object.keys(evaluatedValues);
-    for (let index = 0; index < propsKeys.length; index++) {
-      const key = propsKeys[index];
-      if (!isDynamicValueDefinition(evaluatedValues[key])) continue;
-      const { value } = evaluateDynamicValueDefinition(evaluatedValues[key], em);
+  static getStaticValues(values: ObjectAny, em: EditorModel): ObjectAny {
+    const evaluatedValues: ObjectAny = { ...values };
+    const propsKeys = Object.keys(values);
+
+    for (const key of propsKeys) {
+      const valueDefinition = values[key];
+      if (!isDynamicValueDefinition(valueDefinition)) continue;
+
+      const { value } = evaluateDynamicValueDefinition(valueDefinition, em);
       evaluatedValues[key] = value;
     }
 
