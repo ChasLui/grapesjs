@@ -82,7 +82,6 @@ export class DynamicValueWatcher {
       const key = propsKeys[index];
       if (this.dynamicVariableListeners[key]) {
         serializableValues[key] = this.dynamicVariableListeners[key].dynamicVariable.toJSON();
-        continue;
       }
     }
 

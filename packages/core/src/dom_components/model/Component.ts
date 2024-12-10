@@ -1307,7 +1307,9 @@ export default class Component extends StyleableModel<ComponentProperties> {
     const opts = { ...this.opt };
     const id = this.getId();
     const cssc = em?.Css;
-    attr.attributes = { ...attr.attributes };
+    attr.attributes = {
+      ...(attr.attributes ? this.componentDVListener.getAttributesDefsOrValues(attr.attributes) : undefined),
+    };
     delete attr.attributes.id;
     // @ts-ignore
     attr.components = [];
@@ -1564,8 +1566,8 @@ export default class Component extends StyleableModel<ComponentProperties> {
    */
   toJSON(opts: ObjectAny = {}): ComponentDefinition {
     let obj = Model.prototype.toJSON.call(this, opts);
-    obj.attributes = this.componentDVListener.getAttributesDefsOrValues(this.getAttributes({ noClass: true }));
     obj = { ...obj, ...this.componentDVListener.getDynamicPropsDefs() };
+    obj.attributes = this.componentDVListener.getAttributesDefsOrValues(this.getAttributes({ noClass: true }));
     delete obj.traits;
     delete obj.attributes.class;
     delete obj.toolbar;
