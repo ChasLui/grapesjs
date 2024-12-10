@@ -351,7 +351,10 @@ export default class Component extends StyleableModel<ComponentProperties> {
         : typeof attributeName === 'string'
           ? { [attributeName as string]: value }
           : {};
-    const evaluatedProps = ComponentDynamicValueListener.evaluateComponentDef(props, this.em);
+    const areStaticAttributes = DynamicValueWatcher.areStaticValues(props);
+    const evaluatedProps = areStaticAttributes
+      ? props
+      : ComponentDynamicValueListener.evaluateComponentDef(props, this.em);
     this.componentDVListener?.watchProps(evaluatedProps);
 
     return super.set(evaluatedProps, options);
@@ -1561,8 +1564,9 @@ export default class Component extends StyleableModel<ComponentProperties> {
    */
   toJSON(opts: ObjectAny = {}): ComponentDefinition {
     let obj = Model.prototype.toJSON.call(this, opts);
-    obj.attributes = this.componentDVListener.getAttributesDefsOrValues(this.getAttributes());
+    obj.attributes = this.componentDVListener.getAttributesDefsOrValues(this.getAttributes({ noClass: true }));
     obj = { ...obj, ...this.componentDVListener.getDynamicPropsDefs() };
+    delete obj.traits;
     delete obj.attributes.class;
     delete obj.toolbar;
     delete obj.status;
