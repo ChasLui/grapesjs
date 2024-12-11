@@ -59,4 +59,8 @@ export class ComponentDynamicValueListener {
   getAttributesDefsOrValues(attributes: ObjectAny) {
     return this.attributeWatchClass.getSerializableValues(attributes);
   }
+
+  getPropsDefsOrValues(props: ObjectAny) {
+    return this.propertyWatchClass.getSerializableValues(props);
+  }
 }

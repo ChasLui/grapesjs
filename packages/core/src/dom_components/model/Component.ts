@@ -681,7 +681,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
     const areStaticAttributes = DynamicValueWatcher.areStaticValues(attrs);
     const evaluatedAttributes = areStaticAttributes ? attrs : DynamicValueWatcher.getStaticValues(attrs, this.em);
     this.componentDVListener.setAttributes(attrs);
-    this.set('attributes', evaluatedAttributes, opts);
+    this.set('attributes', { ...evaluatedAttributes }, opts);
 
     return this;
   }
@@ -1304,14 +1304,15 @@ export default class Component extends StyleableModel<ComponentProperties> {
    * @ts-ignore */
   clone(opt: { symbol?: boolean; symbolInv?: boolean } = {}): this {
     const em = this.em;
-    const attr = { ...this.attributes };
+    const attr = {
+      ...this.componentDVListener.getPropsDefsOrValues(this.attributes),
+    };
     const opts = { ...this.opt };
     const id = this.getId();
     const cssc = em?.Css;
     attr.attributes = {
       ...(attr.attributes ? this.componentDVListener.getAttributesDefsOrValues(attr.attributes) : undefined),
     };
-    delete attr.attributes.id;
     // @ts-ignore
     attr.components = [];
     // @ts-ignore
@@ -1569,6 +1570,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
     let obj = Model.prototype.toJSON.call(this, opts);
     obj = { ...obj, ...this.componentDVListener.getDynamicPropsDefs() };
     obj.attributes = this.componentDVListener.getAttributesDefsOrValues(this.getAttributes({ noClass: true }));
+    delete obj.componentDVListener;
     delete obj.traits;
     delete obj.attributes.class;
     delete obj.toolbar;
