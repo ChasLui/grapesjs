@@ -102,7 +102,7 @@ export interface ComponentProperties {
    * Name of the component. Will be used, for example, in Layers and badges
    * @default ''
    */
-  name?: string | DynamicValueDefinition;
+  name?: string;
   /**
    * When `true` the component is removable from the canvas, default: `true`
    * @default true
@@ -115,13 +115,13 @@ export interface ComponentProperties {
        containing `some-class` class and `Hello` title, and `column` components. In the case of a function, target and destination components are passed as arguments, return a Boolean to indicate if the drag is possible. Default: `true`
        * @default true
        */
-  draggable?: boolean | string | DraggableDroppableFn | DynamicValueDefinition;
+  draggable?: boolean | string | DraggableDroppableFn;
   /**
        * Indicates if it's possible to drop other components inside. You can use
       a query string as with `draggable`. In the case of a function, target and destination components are passed as arguments, return a Boolean to indicate if the drop is possible. Default: `true`
        * @default true
        */
-  droppable?: boolean | string | DraggableDroppableFn | DynamicValueDefinition;
+  droppable?: boolean | string | DraggableDroppableFn;
   /**
    * Set to false if you don't want to see the badge (with the name) over the component. Default: `true`
    * @default true
@@ -190,7 +190,7 @@ export interface ComponentProperties {
    * Component default style, eg. `{ width: '100px', height: '100px', 'background-color': 'red' }`
    * @default {}
    */
-  style?: string | Record<string, any | DynamicValueDefinition>;
+  style?: string | Record<string, any>;
   /**
    * Component related styles, eg. `.my-component-class { color: red }`
    * @default ''
@@ -200,12 +200,12 @@ export interface ComponentProperties {
    * Content of the component (not escaped) which will be appended before children rendering. Default: `''`
    * @default ''
    */
-  content?: string | DynamicValueDefinition;
+  content?: string;
   /**
    * Component's icon, this string will be inserted before the name (in Layers and badge), eg. it can be an HTML string '<i class="fa fa-square-o"></i>'. Default: `''`
    * @default ''
    */
-  icon?: string | DynamicValueDefinition;
+  icon?: string;
   /**
    * Component's javascript. More about it [here](/modules/Components-js.html). Default: `''`
    * @default ''
