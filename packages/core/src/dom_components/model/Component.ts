@@ -355,7 +355,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
     const evaluatedProps = areStaticAttributes
       ? props
       : ComponentDynamicValueListener.evaluateComponentDef(props, this.em);
-    this.componentDVListener?.watchProps(evaluatedProps);
+    this.componentDVListener?.watchProps(props);
 
     return super.set(evaluatedProps, options);
   }
