@@ -35,6 +35,7 @@ export class ComponentDynamicValueListener {
   }
 
   watchProps(props: ObjectAny) {
+    this.propertyWatchClass.removeListeners(Object.keys(props));
     this.propertyWatchClass.watchDynamicValue(props);
   }
 

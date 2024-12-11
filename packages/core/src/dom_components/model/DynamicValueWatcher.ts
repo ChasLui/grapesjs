@@ -72,7 +72,12 @@ export class DynamicValueWatcher {
    */
   removeListeners(keys?: string[]) {
     const propsKeys = keys ? keys : Object.keys(this.dynamicVariableListeners);
-    propsKeys.forEach((key) => this.dynamicVariableListeners[key].destroy());
+    propsKeys.forEach((key) => {
+      if (this.dynamicVariableListeners[key]) {
+        this.dynamicVariableListeners[key].destroy();
+        delete this.dynamicVariableListeners[key];
+      }
+    });
   }
 
   getSerializableValues(values: ObjectAny) {
