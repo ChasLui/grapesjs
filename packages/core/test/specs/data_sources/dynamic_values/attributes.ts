@@ -74,8 +74,41 @@ describe('TraitDataVariable', () => {
       testAttribute(cmp, 'dynamicAttribute', 'changed-value');
     });
 
-    // TODO: Decide what to do about watching traits
-    test.skip('dynamic attributes should listen to the latest dynamic value', () => {
+    test('(Component.setAttributes) dynamic attributes should listen to the latest dynamic value', () => {
+      const dataSource = {
+        id: 'ds_id',
+        records: [
+          { id: 'id1', value: 'test-value' },
+          { id: 'id2', value: 'test-value' },
+        ],
+      };
+      dsm.add(dataSource);
+
+      const attributes = {
+        ...staticAttributes,
+        dynamicAttribute: {
+          type: DataVariableType,
+          defaultValue: 'default',
+          path: 'ds_id.id1.value',
+        },
+      };
+      const cmp = cmpRoot.append({
+        tagName: 'input',
+        attributes,
+      })[0];
+
+      cmp.setAttributes({
+        dynamicAttribute: {
+          type: DataVariableType,
+          defaultValue: 'default',
+          path: 'ds_id.id2.value',
+        },
+      });
+      changeDataSourceValue(dsm);
+      testAttribute(cmp, 'dynamicAttribute', 'test-value');
+    });
+
+    test('(Component.addAttributes) dynamic attributes should listen to the latest dynamic value', () => {
       const dataSource = {
         id: 'ds_id',
         records: [
