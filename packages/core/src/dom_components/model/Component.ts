@@ -696,6 +696,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
    */
   addAttributes(attrs: ObjectAny, opts: SetAttrOptions = {}) {
     const areStaticAttributes = DynamicValueWatcher.areStaticValues(attrs);
+    this.componentDVListener.removeAttributes(Object.keys(attrs));
     const evaluatedAttributes = areStaticAttributes ? attrs : DynamicValueWatcher.getStaticValues(attrs, this.em);
     this.componentDVListener.watchAttributes(attrs);
 
