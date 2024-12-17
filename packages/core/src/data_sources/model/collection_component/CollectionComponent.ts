@@ -5,6 +5,7 @@ import { ComponentDefinition, ComponentOptions, ComponentProperties } from '../.
 import { toLowerCase } from '../../../utils/mixins';
 import { ConditionDefinition, ConditionalVariableType } from '../conditional_variables/DataCondition';
 import DataSource from '../DataSource';
+import { DataVariableType } from '../DataVariable';
 
 export const CollectionVariableType = 'collection-variable';
 // Represents the type for defining a loop’s data source.
@@ -50,6 +51,14 @@ export default class CollectionComponent extends Component {
         break;
       case typeof dataSource === 'object' && dataSource instanceof DataSource:
         items = dataSource.getRecords();
+        break;
+      case typeof dataSource === 'object' && dataSource.type === DataVariableType:
+        const resolvedPath = opt.em.DataSources.fromPath(dataSource.path);
+        if (typeof resolvedPath[0] === 'object' && resolvedPath[0] instanceof DataSource) {
+          items = resolvedPath[0].getRecords();
+        } else {
+          items = resolvedPath;
+        }
         break;
       default:
     }
