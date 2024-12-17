@@ -1,3 +1,4 @@
+import { ComponentDefinitionDefined } from './../../../dom_components/model/types';
 import { isArray } from 'underscore';
 import Component from '../../../dom_components/model/Component';
 import { ComponentDefinition, ComponentOptions, ComponentProperties } from '../../../dom_components/model/types';
@@ -42,7 +43,6 @@ export default class CollectionComponent extends Component {
   constructor(props: CollectionDefinition & ComponentProperties, opt: ComponentOptions) {
     const { block, config } = props.collectionDefinition;
     const { dataSource } = config;
-    console.log("🚀 ~ CollectionComponent ~ constructor ~ dataSource:", dataSource);
     let items = [];
     switch (true) {
       case isArray(dataSource):
@@ -50,21 +50,48 @@ export default class CollectionComponent extends Component {
         break;
       case typeof dataSource === 'object' && dataSource instanceof DataSource:
         items = dataSource.getRecords();
-        console.log("🚀 ~ CollectionComponent ~ constructor ~ items:", items)
         break;
       default:
     }
-    const components = items.map((item) => block(item));
+
+    const components: ComponentDefinitionDefined[] = items.map((item) => resolveBlockValue(item, block));
     const conditionalCmptDef = {
+      ...props,
       type: ConditionalVariableType,
       components: components,
-      // ...super.defaults
     };
-    //@ts-ignore
+    // @ts-expect-error
     super(conditionalCmptDef, opt);
   }
 
   static isComponent(el: HTMLElement) {
     return toLowerCase(el.tagName) === ConditionalVariableType;
   }
+}
+
+function resolveBlockValue(item: any, block: any) {
+  const stringifiedItem = JSON.stringify(item);
+  const keys = Object.keys(block);
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    const value = block[key];
+    if (typeof value === 'object') {
+      if (value.type === 'parent-collection-variable') {
+        if (!value.path || value.path === 'item') {
+          block[key] = stringifiedItem;
+        } else {
+          const arr = value.path.split('.');
+          if (item.get) {
+            block[key] = item.get?.(arr[0]);
+          } else {
+            block[key] = item[arr[0]];
+          }
+        }
+      } else {
+        block[key] = resolveBlockValue(item, value);
+      }
+    }
+  }
+
+  return block;
 }
