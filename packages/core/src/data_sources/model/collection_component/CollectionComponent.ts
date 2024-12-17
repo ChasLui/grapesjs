@@ -68,6 +68,7 @@ export default class CollectionComponent extends Component {
       ...props,
       type: ConditionalVariableType,
       components: components,
+      dropbbable: false,
     };
     // @ts-expect-error
     super(conditionalCmptDef, opt);
@@ -101,6 +102,8 @@ function resolveBlockValue(item: any, block: any) {
       }
     }
   }
-
+  block['droppable'] = false;
+  block['draggable'] = false;
+  
   return block;
 }
