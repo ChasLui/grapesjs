@@ -128,6 +128,8 @@ import { DataVariableType } from '../data_sources/model/DataVariable';
 import { ConditionalVariableType } from '../data_sources/model/conditional_variables/DataCondition';
 import ComponentConditionalVariable from '../data_sources/model/conditional_variables/ConditionalComponent';
 import ConditionalComponentView from '../data_sources/view/ComponentDynamicView';
+import CollectionComponent from '../data_sources/model/collection_component/CollectionComponent';
+import CollectionComponentView from '../data_sources/model/collection_component/CollectionComponentView';
 
 export type ComponentEvent =
   | 'component:create'
@@ -193,6 +195,11 @@ export interface CanMoveResult {
 
 export default class ComponentManager extends ItemManagerModule<DomComponentsConfig, any> {
   componentTypes: ComponentStackItem[] = [
+    {
+      id: 'collection-component',
+      model: CollectionComponent,
+      view: CollectionComponentView,
+    },
     {
       id: ConditionalVariableType,
       model: ComponentConditionalVariable,
