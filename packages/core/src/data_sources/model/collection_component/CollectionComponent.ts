@@ -44,13 +44,16 @@ export default class CollectionComponent extends Component {
   constructor(props: CollectionDefinition & ComponentProperties, opt: ComponentOptions) {
     const { block, config } = props.collectionDefinition;
     const { dataSource } = config;
-    let items: any[] = [];
+    let items: CollectionStateVariables[] = [];
     switch (true) {
       case isArray(dataSource):
         items = dataSource;
         break;
       case typeof dataSource === 'object' && dataSource instanceof DataSource:
-        items = dataSource.getRecords();
+        const id = dataSource.get('id')!;
+        const resolvedPath = opt.em.DataSources.getValue(id, []);
+        const keys = Object.keys(resolvedPath);
+        items = keys.map(key => resolvedPath[key]);
         break;
       case typeof dataSource === 'object' && dataSource.type === DataVariableType:
         const pathArr = dataSource.path.split('.');
@@ -65,7 +68,7 @@ export default class CollectionComponent extends Component {
       default:
     }
 
-    const components: ComponentDefinitionDefined[] = items.map((item: any, index) => resolveBlockValue({
+    const components: ComponentDefinitionDefined[] = items.map((item: CollectionStateVariables, index) => resolveBlockValue({
       currentIndex: index,
       firstIndex: config.startIndex,
       currentItem: item,
