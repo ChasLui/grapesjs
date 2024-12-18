@@ -3,11 +3,11 @@ import { isArray } from 'underscore';
 import Component from '../../../dom_components/model/Component';
 import { ComponentDefinition, ComponentOptions, ComponentProperties } from '../../../dom_components/model/types';
 import { toLowerCase } from '../../../utils/mixins';
-import { ConditionDefinition, ConditionalVariableType } from '../conditional_variables/DataCondition';
+import { ConditionDefinition } from '../conditional_variables/DataCondition';
 import DataSource from '../DataSource';
 import { DataVariableType } from '../DataVariable';
 
-export const CollectionVariableType = 'collection-variable';
+export const CollectionVariableType = 'collection-component';
 // Represents the type for defining a loop’s data source.
 type CollectionDataSource =
   | any[]  // Direct array
@@ -44,7 +44,7 @@ export default class CollectionComponent extends Component {
   constructor(props: CollectionDefinition & ComponentProperties, opt: ComponentOptions) {
     const { block, config } = props.collectionDefinition;
     const { dataSource } = config;
-    let items = [];
+    let items: any[] = [];
     switch (true) {
       case isArray(dataSource):
         items = dataSource;
@@ -53,20 +53,31 @@ export default class CollectionComponent extends Component {
         items = dataSource.getRecords();
         break;
       case typeof dataSource === 'object' && dataSource.type === DataVariableType:
-        const resolvedPath = opt.em.DataSources.fromPath(dataSource.path);
-        if (typeof resolvedPath[0] === 'object' && resolvedPath[0] instanceof DataSource) {
-          items = resolvedPath[0].getRecords();
+        const pathArr = dataSource.path.split('.');
+        if (pathArr.length === 1) {
+          const resolvedPath = opt.em.DataSources.getValue(dataSource.path, []);
+          const keys = Object.keys(resolvedPath);
+          items = keys.map(key => resolvedPath[key]);
         } else {
-          items = resolvedPath;
+          items = opt.em.DataSources.getValue(dataSource.path, []);
         }
         break;
       default:
     }
 
-    const components: ComponentDefinitionDefined[] = items.map((item) => resolveBlockValue(item, block));
+    const components: ComponentDefinitionDefined[] = items.map((item: any, index) => resolveBlockValue({
+      currentIndex: index,
+      firstIndex: config.startIndex,
+      currentItem: item,
+      lastIndex: config.endIndex,
+      collectionName: props.collectionName,
+      totalItems: items.length,
+      remainingItems: items.length - index,
+    }, block)
+    );
     const conditionalCmptDef = {
       ...props,
-      type: ConditionalVariableType,
+      type: CollectionVariableType,
       components: components,
       dropbbable: false,
     };
@@ -75,35 +86,91 @@ export default class CollectionComponent extends Component {
   }
 
   static isComponent(el: HTMLElement) {
-    return toLowerCase(el.tagName) === ConditionalVariableType;
+    return toLowerCase(el.tagName) === CollectionVariableType;
   }
 }
 
-function resolveBlockValue(item: any, block: any) {
-  const stringifiedItem = JSON.stringify(item);
-  const keys = Object.keys(block);
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i];
-    const value = block[key];
-    if (typeof value === 'object') {
-      if (value.type === 'parent-collection-variable') {
-        if (!value.path || value.path === 'item') {
-          block[key] = stringifiedItem;
-        } else {
-          const arr = value.path.split('.');
-          if (item.get) {
-            block[key] = item.get?.(arr[0]);
-          } else {
-            block[key] = item[arr[0]];
+/**
+ * Deeply clones an object.
+ * @template T The type of the object to clone.
+ * @param {T} obj The object to clone.
+ * @returns {T} A deep clone of the object, or the original object if it's not an object or is null. Returns undefined if input is undefined.
+ */
+function deepCloneObject<T extends Record<string, any> | null | undefined>(obj: T): T {
+  if (obj === null) return null as T;
+  if (obj === undefined) return undefined as T;
+  if (typeof obj !== 'object' || Array.isArray(obj)) {
+    return obj; // Return primitives directly
+  }
+
+  const clonedObj: Record<string, any> = {};
+
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      clonedObj[key] = deepCloneObject(obj[key]);
+    }
+  }
+
+  return clonedObj as T;
+}
+
+function resolveBlockValue(item: any, block: any): any {
+  const clonedBlock = deepCloneObject(block);
+
+  if (typeof clonedBlock === 'object' && clonedBlock !== null) {
+    const stringifiedItem = JSON.stringify(item.currentItem);
+    const keys = Object.keys(clonedBlock);
+
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+      let value = clonedBlock[key];
+
+      if (typeof value === 'object') {
+        if (value.type === 'parent-collection-variable') {
+          if (value.variable_type === 'current_item') {
+            if (!value.path) {
+              clonedBlock[key] = stringifiedItem;
+            } else {
+              const pathParts = value.path.split('.');
+              let resolvedValue = item.currentItem;
+              for (const part of pathParts) {
+                if (resolvedValue && typeof resolvedValue === 'object' && resolvedValue.hasOwnProperty(part)) {
+                  resolvedValue = resolvedValue[part];
+                } else {
+                  resolvedValue = undefined; // Handle cases where the path doesn't exist
+                  break;
+                }
+              }
+              clonedBlock[key] = resolvedValue;
+            }
+          } else if (value.variable_type === 'current_index') {
+            clonedBlock[key] = String(item.currentIndex);
+          } else if (value.variable_type === 'first_index') {
+            clonedBlock[key] = String(item.firstIndex);
+          } else if (value.variable_type === 'last_index') {
+            clonedBlock[key] = String(item.lastIndex);
+          } else if (value.variable_type === 'collection_name') {
+            clonedBlock[key] = String(item.collectionName);
+          } else if (value.variable_type === 'total_items') {
+            clonedBlock[key] = String(item.totalItems);
+          } else if (value.variable_type === 'remaining_items') {
+            clonedBlock[key] = String(item.remainingItems);
           }
+        } else if (Array.isArray(value)) {
+          // Handle arrays: Resolve each item in the array
+          clonedBlock[key] = value.map((itemInArray: any) => {
+            if (typeof itemInArray === 'object') {
+              return resolveBlockValue(item, itemInArray);
+            }
+
+            return itemInArray; // Return primitive values directly
+          });
+        } else {
+          clonedBlock[key] = resolveBlockValue(item, value);
         }
-      } else {
-        block[key] = resolveBlockValue(item, value);
       }
     }
   }
-  block['droppable'] = false;
-  block['draggable'] = false;
-  
-  return block;
+
+  return clonedBlock;
 }
