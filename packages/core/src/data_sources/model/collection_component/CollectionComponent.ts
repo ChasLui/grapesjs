@@ -16,17 +16,17 @@ type CollectionDataSource =
 
 // Defines the collection's configuration, such as start and end indexes, and data source.
 interface CollectionConfig {
-  startIndex?: number;  // The starting index for the collection
-  endIndex?: number | ConditionDefinition;  // End index; can be absolute or relative (If omitted will loop over all items)
+  start_index?: number;  // The starting index for the collection
+  end_index?: number | ConditionDefinition;  // End index; can be absolute or relative (If omitted will loop over all items)
   dataSource: CollectionDataSource;  // The data source (array or object reference)
 }
 
 // Provides access to collection state variables during iteration.
 interface CollectionStateVariables {
   current_index: number;  // Current collection index
-  first_index: number;  // Start index
+  start_index: number;  // Start index
   current_item: any;  // Current item in the iteration
-  last_index: number;  // End index
+  end_index: number;  // End index
   collection_name?: string;  // Optional name of the collection
   total_items: number;  // Total number of items in the collection
   remaining_items: number; // Remaining items in the collection
@@ -43,7 +43,11 @@ interface CollectionDefinition {
 export default class CollectionComponent extends Component {
   constructor(props: CollectionDefinition & ComponentProperties, opt: ComponentOptions) {
     const { collection_name, block, config } = props.collectionDefinition;
-    const { dataSource } = config;
+    const {
+      start_index = 0,
+      end_index = Number.MAX_VALUE,
+      dataSource = [],
+    } = config
     let items: CollectionStateVariables[] = [];
     switch (true) {
       case isArray(dataSource):
@@ -72,26 +76,26 @@ export default class CollectionComponent extends Component {
       const innerMostCollectionItem = {
         collection_name,
         current_index: index,
-        first_index: config.startIndex,
         current_item: item,
-        last_index: config.endIndex,
+        start_index,
+        end_index,
         total_items: items.length,
-        remaining_items: items.length - index,
+        remaining_items: items.length - (index + 1),
       };
 
       const allCollectionItems = {
         ...props.collectionsItems,
         [innerMostCollectionItem.collection_name ? innerMostCollectionItem.collection_name : 'innerMostCollectionItem']:
-        innerMostCollectionItem,
+          innerMostCollectionItem,
         innerMostCollectionItem
       }
 
       let components = resolveBlockValues(allCollectionItems, block);
       components['collectionsItems'] = allCollectionItems;
-      
+
       return components;
     });
-  
+
     const conditionalCmptDef = {
       ...props,
       type: CollectionVariableType,
