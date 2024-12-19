@@ -267,7 +267,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
       props['components']?.map(component => {
         return {
           ...component,
-          [componentCollectionKey]: {
+          collectionsItems: {
             ...props.componentCollectionKey
           }
         }
@@ -276,7 +276,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
       props['components'] = {
         ...props['components'],
         // @ts-ignore
-        [componentCollectionKey]: {
+        collectionsItems: {
           ...props.componentCollectionKey
         }
       }
