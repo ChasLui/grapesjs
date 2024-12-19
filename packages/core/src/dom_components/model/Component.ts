@@ -55,6 +55,7 @@ import TraitDataVariable from '../../data_sources/model/TraitDataVariable';
 import { ConditionalVariableType, DataCondition } from '../../data_sources/model/conditional_variables/DataCondition';
 import { isDynamicValue, isDynamicValueDefinition } from '../../data_sources/model/utils';
 import { DynamicValueDefinition } from '../../data_sources/types';
+import { componentCollectionKey } from '../../data_sources/model/collection_component/CollectionComponent';
 
 export interface IComponent extends ExtractMethods<Component> { }
 
@@ -266,8 +267,8 @@ export default class Component extends StyleableModel<ComponentProperties> {
       props['components']?.map(component => {
         return {
           ...component,
-          collectionsItems: {
-            ...props.collectionsItems
+          [componentCollectionKey]: {
+            ...props.componentCollectionKey
           }
         }
       })
@@ -275,8 +276,8 @@ export default class Component extends StyleableModel<ComponentProperties> {
       props['components'] = {
         ...props['components'],
         // @ts-ignore
-        collectionsItems: {
-          ...props.collectionsItems
+        [componentCollectionKey]: {
+          ...props.componentCollectionKey
         }
       }
     }

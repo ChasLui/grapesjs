@@ -39,6 +39,7 @@ interface CollectionDefinition {
   config: CollectionConfig;  // Loop configuration details
   block: ComponentDefinition;  // Component definition for each iteration
 }
+export const componentCollectionKey = 'collectionsItems';
 
 export default class CollectionComponent extends Component {
   constructor(props: CollectionDefinition & ComponentProperties, opt: ComponentOptions) {
@@ -91,7 +92,7 @@ export default class CollectionComponent extends Component {
       }
 
       let components = resolveBlockValues(allCollectionItems, block);
-      components['collectionsItems'] = allCollectionItems;
+      components[componentCollectionKey] = allCollectionItems;
 
       return components;
     });
