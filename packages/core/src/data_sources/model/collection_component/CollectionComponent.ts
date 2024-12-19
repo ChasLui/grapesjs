@@ -151,17 +151,18 @@ function resolveBlockValues(context: any, block: any): any {
           const collectionItem = blockValue.collection_name
             ? context[blockValue.collection_name]
             : innerMostCollectionItem;
-          if (!collectionItem) continue;
+          if (!collectionItem) {
+            throw new Error(
+              `Collection not found: ${blockValue.collection_name || 'default collection'}`
+            );
+          }
 
-          switch (blockValue.variable_type) {
-            case 'current_item':
-              clonedBlock[key] = blockValue.path
-                ? resolvePathValue(collectionItem.current_item, blockValue.path)
-                : JSON.stringify(collectionItem.current_item);
-              break;
-            default:
-              clonedBlock[key] = collectionItem[blockValue.variable_type];
-              break;
+          if (blockValue.variable_type === 'current_item') {
+            clonedBlock[key] = blockValue.path
+              ? resolvePathValue(collectionItem.current_item, blockValue.path)
+              : JSON.stringify(collectionItem.current_item);
+          } else {
+            clonedBlock[key] = collectionItem[blockValue.variable_type];
           }
         } else if (Array.isArray(blockValue)) {
           // Resolve each item in the array
