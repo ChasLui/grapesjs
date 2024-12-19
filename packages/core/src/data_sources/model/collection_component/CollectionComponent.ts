@@ -144,6 +144,7 @@ function resolveBlockValues(context: any, block: any): any {
 
     for (const key of blockKeys) {
       let blockValue = clonedBlock[key];
+      if (key === 'collectionDefinition') continue;
 
       if (typeof blockValue === 'object' && blockValue !== null) {
         if (blockValue.type === 'parent-collection-variable') {
@@ -160,7 +161,7 @@ function resolveBlockValues(context: any, block: any): any {
               break;
             default:
               clonedBlock[key] = collectionItem[blockValue.variable_type];
-              break; // Handle unexpected variable types gracefully
+              break;
           }
         } else if (Array.isArray(blockValue)) {
           // Resolve each item in the array
