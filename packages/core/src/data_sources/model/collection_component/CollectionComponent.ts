@@ -23,26 +23,26 @@ interface CollectionConfig {
 
 // Provides access to collection state variables during iteration.
 interface CollectionStateVariables {
-  currentIndex: number;  // Current collection index
-  firstIndex: number;  // Start index
-  currentItem: any;  // Current item in the iteration
-  lastIndex: number;  // End index
-  collectionName?: string;  // Optional name of the collection
-  totalItems: number;  // Total number of items in the collection
-  remainingItems: number; // Remaining items in the collection
+  current_index: number;  // Current collection index
+  first_index: number;  // Start index
+  current_item: any;  // Current item in the iteration
+  last_index: number;  // End index
+  collection_name?: string;  // Optional name of the collection
+  total_items: number;  // Total number of items in the collection
+  remaining_items: number; // Remaining items in the collection
 }
 
 // Defines the complete structure for a collection, including configuration and state variables.
 interface CollectionDefinition {
   type: typeof CollectionVariableType;
-  collectionName?: string;  // Optional collection name
+  collection_name?: string;  // Optional collection name
   config: CollectionConfig;  // Loop configuration details
   block: ComponentDefinition;  // Component definition for each iteration
 }
 
 export default class CollectionComponent extends Component {
   constructor(props: CollectionDefinition & ComponentProperties, opt: ComponentOptions) {
-    const { block, config } = props.collectionDefinition;
+    const { collection_name, block, config } = props.collectionDefinition;
     const { dataSource } = config;
     let items: CollectionStateVariables[] = [];
     switch (true) {
@@ -68,16 +68,30 @@ export default class CollectionComponent extends Component {
       default:
     }
 
-    const components: ComponentDefinitionDefined[] = items.map((item: CollectionStateVariables, index) => resolveBlockValue({
-      currentIndex: index,
-      firstIndex: config.startIndex,
-      currentItem: item,
-      lastIndex: config.endIndex,
-      collectionName: props.collectionName,
-      totalItems: items.length,
-      remainingItems: items.length - index,
-    }, block)
-    );
+    const components: ComponentDefinitionDefined[] = items.map((item: CollectionStateVariables, index) => {
+      const innerMostCollectionItem = {
+        collection_name,
+        current_index: index,
+        first_index: config.startIndex,
+        current_item: item,
+        last_index: config.endIndex,
+        total_items: items.length,
+        remaining_items: items.length - index,
+      };
+
+      const allCollectionItems = {
+        ...props.collectionsItems,
+        [innerMostCollectionItem.collection_name ? innerMostCollectionItem.collection_name : 'innerMostCollectionItem']:
+        innerMostCollectionItem,
+        innerMostCollectionItem
+      }
+
+      let components = resolveBlockValues(allCollectionItems, block);
+      components['collectionsItems'] = allCollectionItems;
+      
+      return components;
+    });
+  
     const conditionalCmptDef = {
       ...props,
       type: CollectionVariableType,
@@ -117,63 +131,60 @@ function deepCloneObject<T extends Record<string, any> | null | undefined>(obj: 
   return clonedObj as T;
 }
 
-function resolveBlockValue(item: any, block: any): any {
+function resolveBlockValues(context: any, block: any): any {
+  console.log("🚀 ~ resolveBlockValues ~ context:", context)
+  const { innerMostCollectionItem } = context;
   const clonedBlock = deepCloneObject(block);
 
   if (typeof clonedBlock === 'object' && clonedBlock !== null) {
-    const stringifiedItem = JSON.stringify(item.currentItem);
-    const keys = Object.keys(clonedBlock);
+    const blockKeys = Object.keys(clonedBlock);
 
-    for (let i = 0; i < keys.length; i++) {
-      const key = keys[i];
-      let value = clonedBlock[key];
+    for (const key of blockKeys) {
+      let blockValue = clonedBlock[key];
 
-      if (typeof value === 'object') {
-        if (value.type === 'parent-collection-variable') {
-          if (value.variable_type === 'current_item') {
-            if (!value.path) {
-              clonedBlock[key] = stringifiedItem;
-            } else {
-              const pathParts = value.path.split('.');
-              let resolvedValue = item.currentItem;
-              for (const part of pathParts) {
-                if (resolvedValue && typeof resolvedValue === 'object' && resolvedValue.hasOwnProperty(part)) {
-                  resolvedValue = resolvedValue[part];
-                } else {
-                  resolvedValue = undefined; // Handle cases where the path doesn't exist
-                  break;
-                }
-              }
-              clonedBlock[key] = resolvedValue;
-            }
-          } else if (value.variable_type === 'current_index') {
-            clonedBlock[key] = String(item.currentIndex);
-          } else if (value.variable_type === 'first_index') {
-            clonedBlock[key] = String(item.firstIndex);
-          } else if (value.variable_type === 'last_index') {
-            clonedBlock[key] = String(item.lastIndex);
-          } else if (value.variable_type === 'collection_name') {
-            clonedBlock[key] = String(item.collectionName);
-          } else if (value.variable_type === 'total_items') {
-            clonedBlock[key] = String(item.totalItems);
-          } else if (value.variable_type === 'remaining_items') {
-            clonedBlock[key] = String(item.remainingItems);
+      if (typeof blockValue === 'object' && blockValue !== null) {
+        if (blockValue.type === 'parent-collection-variable') {
+          const collectionItem = blockValue.collection_name
+            ? context[blockValue.collection_name]
+            : innerMostCollectionItem;
+          if (!collectionItem) continue;
+
+          switch (blockValue.variable_type) {
+            case 'current_item':
+              clonedBlock[key] = blockValue.path
+                ? resolvePathValue(collectionItem, blockValue.path)
+                : JSON.stringify(collectionItem);
+              break;
+            default:
+              clonedBlock[key] = collectionItem[blockValue.variable_type];
+              break; // Handle unexpected variable types gracefully
           }
-        } else if (Array.isArray(value)) {
-          // Handle arrays: Resolve each item in the array
-          clonedBlock[key] = value.map((itemInArray: any) => {
-            if (typeof itemInArray === 'object') {
-              return resolveBlockValue(item, itemInArray);
-            }
-
-            return itemInArray; // Return primitive values directly
-          });
+        } else if (Array.isArray(blockValue)) {
+          // Resolve each item in the array
+          clonedBlock[key] = blockValue.map((arrayItem: any) =>
+            typeof arrayItem === 'object' ? resolveBlockValues(context, arrayItem) : arrayItem
+          );
         } else {
-          clonedBlock[key] = resolveBlockValue(item, value);
+          clonedBlock[key] = resolveBlockValues(context, blockValue);
         }
       }
     }
   }
 
   return clonedBlock;
+}
+
+function resolvePathValue(object: any, path: string): any {
+  const pathSegments = path.split('.');
+  let resolvedValue = object;
+
+  for (const segment of pathSegments) {
+    if (resolvedValue && typeof resolvedValue === 'object' && segment in resolvedValue) {
+      resolvedValue = resolvedValue[segment];
+    } else {
+      return undefined; // Return undefined if the path doesn't exist
+    }
+  }
+
+  return resolvedValue;
 }
