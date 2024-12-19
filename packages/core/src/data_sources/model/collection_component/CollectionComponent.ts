@@ -136,7 +136,6 @@ function deepCloneObject<T extends Record<string, any> | null | undefined>(obj: 
 }
 
 function resolveBlockValues(context: any, block: any): any {
-  console.log("🚀 ~ resolveBlockValues ~ context:", context)
   const { innerMostCollectionItem } = context;
   const clonedBlock = deepCloneObject(block);
 
@@ -156,8 +155,8 @@ function resolveBlockValues(context: any, block: any): any {
           switch (blockValue.variable_type) {
             case 'current_item':
               clonedBlock[key] = blockValue.path
-                ? resolvePathValue(collectionItem, blockValue.path)
-                : JSON.stringify(collectionItem);
+                ? resolvePathValue(collectionItem.current_item, blockValue.path)
+                : JSON.stringify(collectionItem.current_item);
               break;
             default:
               clonedBlock[key] = collectionItem[blockValue.variable_type];
