@@ -73,15 +73,20 @@ export default class CollectionComponent extends Component {
       default:
     }
 
-    const components: ComponentDefinitionDefined[] = items.map((item: CollectionStateVariables, index) => {
+    const components: ComponentDefinitionDefined[] = [];
+    const resolvedStartIndex = Math.max(0, start_index);
+    const resolvedEndIndex = Math.min(items.length - 1, end_index);
+    for (let index = resolvedStartIndex; index <= resolvedEndIndex; index++) {
+      const item = items[index];
+      const total_items = resolvedEndIndex - resolvedStartIndex + 1;
       const innerMostCollectionItem = {
         collection_name,
         current_index: index,
         current_item: item,
-        start_index,
-        end_index,
-        total_items: items.length,
-        remaining_items: items.length - (index + 1),
+        start_index: resolvedStartIndex,
+        end_index: resolvedEndIndex,
+        total_items: total_items,
+        remaining_items: total_items - (index + 1),
       };
 
       const allCollectionItems = {
@@ -91,11 +96,9 @@ export default class CollectionComponent extends Component {
         innerMostCollectionItem
       }
 
-      let components = resolveBlockValues(allCollectionItems, block);
-      components[componentCollectionKey] = allCollectionItems;
-
-      return components;
-    });
+      const component = resolveBlockValues(allCollectionItems, block);
+      components.push(component);
+    }
 
     const conditionalCmptDef = {
       ...props,
