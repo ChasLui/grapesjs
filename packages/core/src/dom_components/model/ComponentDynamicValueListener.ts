@@ -13,11 +13,11 @@ export class ComponentDynamicValueListener {
     em: EditorModel,
   ) {
     this.propertyWatchClass = new DynamicValueWatcher((key: string, value: any) => {
-      this.component.set(key, value);
+      this.component.set(key, value, { updateDynamicWatchers: false });
     }, em);
 
     this.attributeWatchClass = new DynamicValueWatcher((key: string, value: any) => {
-      this.component.setAttributes({ [key]: value });
+      this.component.setAttributes({ [key]: value }, { updateDynamicWatchers: false });
     }, em);
 
     this.traitsWatchClass = new DynamicValueWatcher((key: string, value: any) => {

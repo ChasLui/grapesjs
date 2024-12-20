@@ -55,8 +55,11 @@ import { ComponentDynamicValueListener } from './ComponentDynamicValueListener';
 import { DynamicValueWatcher } from './DynamicValueWatcher';
 
 export interface IComponent extends ExtractMethods<Component> { }
-
-export interface SetAttrOptions extends SetOptions, UpdateStyleOptions { }
+export interface DynamicWatchersOptions {
+  updateDynamicWatchers?: boolean;
+}
+export interface SetAttrOptions extends SetOptions, UpdateStyleOptions, DynamicWatchersOptions { }
+export interface ComponentSetOptions extends SetOptions, DynamicWatchersOptions { }
 
 const escapeRegExp = (str: string) => {
   return str.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&');
@@ -334,17 +337,17 @@ export default class Component extends StyleableModel<ComponentProperties> {
     }
   }
 
-  set<A extends string>(attributeName: A, value?: ComponentProperties[A], options?: SetOptions): this;
-  set(attributeName: Partial<ComponentProperties>, options?: SetOptions): this;
+  set<A extends string>(attributeName: A, value?: ComponentProperties[A], options?: ComponentSetOptions): this;
+  set(attributeName: Partial<ComponentProperties>, options?: ComponentSetOptions): this;
   set<A extends string>(
     attributeName: Partial<ComponentProperties> | A,
     value?: SetOptions | ComponentProperties[A],
-    options?: SetOptions,
+    options?: ComponentSetOptions,
   ): this;
   set<A extends string>(
     attributeName: Partial<ComponentProperties> | A,
     value?: SetOptions | ComponentProperties[A],
-    options?: SetOptions,
+    options: ComponentSetOptions = { updateDynamicWatchers: true },
   ): this {
     const props =
       typeof attributeName === 'object'
@@ -356,7 +359,9 @@ export default class Component extends StyleableModel<ComponentProperties> {
     const evaluatedProps = areStaticAttributes
       ? props
       : ComponentDynamicValueListener.evaluateComponentDef(props, this.em);
-    this.componentDVListener?.watchProps(props);
+    if (options.updateDynamicWatchers) {
+      this.componentDVListener?.watchProps(props);
+    }
 
     return super.set(evaluatedProps, options);
   }
@@ -678,10 +683,12 @@ export default class Component extends StyleableModel<ComponentProperties> {
    * @example
    * component.setAttributes({ id: 'test', 'data-key': 'value' });
    */
-  setAttributes(attrs: ObjectAny, opts: SetAttrOptions = {}) {
+  setAttributes(attrs: ObjectAny, opts: SetAttrOptions = { updateDynamicWatchers: true }) {
     const areStaticAttributes = DynamicValueWatcher.areStaticValues(attrs);
     const evaluatedAttributes = areStaticAttributes ? attrs : DynamicValueWatcher.getStaticValues(attrs, this.em);
-    this.componentDVListener.setAttributes(attrs);
+    if (opts.updateDynamicWatchers) {
+      this.componentDVListener.setAttributes(attrs);
+    }
     this.set('attributes', { ...evaluatedAttributes }, opts);
 
     return this;
