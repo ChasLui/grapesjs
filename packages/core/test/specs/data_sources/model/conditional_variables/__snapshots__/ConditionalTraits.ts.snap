@@ -14,17 +14,30 @@ exports[`TraitConditionalVariable should store traits with conditional values co
                 "attributes": {
                   "dynamicTrait": "Positive",
                 },
-                "attributes-dynamic-value": {
-                  "dynamicTrait": {
-                    "condition": {
-                      "left": 0,
-                      "operator": ">",
-                      "right": -1,
+                "attributes-dynamic-value": [
+                  {
+                    "category": "",
+                    "changeProp": false,
+                    "default": "",
+                    "id": "data-variable-id",
+                    "label": "",
+                    "name": "dynamicTrait",
+                    "options": [],
+                    "placeholder": "",
+                    "step": 1,
+                    "type": "text",
+                    "unit": "",
+                    "value": {
+                      "condition": {
+                        "left": 0,
+                        "operator": ">",
+                        "right": -1,
+                      },
+                      "ifTrue": "Positive",
+                      "type": "conditional-variable",
                     },
-                    "ifTrue": "Positive",
-                    "type": "conditional-variable",
                   },
-                },
+                ],
                 "tagName": "h1",
                 "type": "text",
               },
