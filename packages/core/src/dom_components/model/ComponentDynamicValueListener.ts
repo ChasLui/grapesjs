@@ -106,4 +106,10 @@ export class ComponentDynamicValueListener {
   getPropsDefsOrValues(props: ObjectAny) {
     return this.propertyWatchClass.getSerializableValues(props);
   }
+
+  destroy() {
+    this.propertyWatchClass.removeListeners();
+    this.attributeWatchClass.removeListeners();
+    this.traitsWatchClass.removeListeners();
+  }
 }

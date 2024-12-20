@@ -13,7 +13,7 @@ import {
 } from 'underscore';
 import { shallowDiff, capitalize, isEmptyObj, isObject, toLowerCase } from '../../utils/mixins';
 import StyleableModel, { StyleProps, UpdateStyleOptions } from '../../domain_abstract/model/StyleableModel';
-import { Model } from 'backbone';
+import { Model, ModelDestroyOptions } from 'backbone';
 import Components from './Components';
 import Selector from '../../selector_manager/model/Selector';
 import Selectors from '../../selector_manager/model/Selectors';
@@ -1818,6 +1818,11 @@ export default class Component extends StyleableModel<ComponentProperties> {
     [this, em].map((i) => i.trigger(ComponentsEvents.removeBefore, this, remove, rmOpts));
     !rmOpts.abort && remove();
     return this;
+  }
+
+  destroy(options?: ModelDestroyOptions | undefined): false | JQueryXHR {
+    this.componentDVListener.destroy();
+    return super.destroy(options);
   }
 
   /**
