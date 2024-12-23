@@ -79,7 +79,7 @@ describe('TraitDataVariable', () => {
         id: 'ds_id',
         records: [
           { id: 'id1', value: 'test-value' },
-          { id: 'id2', value: 'test-value' },
+          { id: 'id2', value: 'test-value2' },
         ],
       };
       dsm.add(dataSource);
@@ -105,7 +105,7 @@ describe('TraitDataVariable', () => {
         },
       });
       changeDataSourceValue(dsm);
-      testAttribute(cmp, 'dynamicAttribute', 'test-value');
+      testAttribute(cmp, 'dynamicAttribute', 'test-value2');
     });
 
     test('(Component.addAttributes) dynamic attributes should listen to the latest dynamic value', () => {
@@ -113,7 +113,7 @@ describe('TraitDataVariable', () => {
         id: 'ds_id',
         records: [
           { id: 'id1', value: 'test-value' },
-          { id: 'id2', value: 'test-value' },
+          { id: 'id2', value: 'test-value2' },
         ],
       };
       dsm.add(dataSource);
@@ -139,7 +139,7 @@ describe('TraitDataVariable', () => {
         },
       });
       changeDataSourceValue(dsm);
-      testAttribute(cmp, 'dynamicAttribute', 'test-value');
+      testAttribute(cmp, 'dynamicAttribute', 'test-value2');
     });
 
     test('dynamic attributes should stop listening to change if the value changed to static', () => {
