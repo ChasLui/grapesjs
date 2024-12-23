@@ -4,27 +4,37 @@ import Component, { dynamicAttrKey } from './Component';
 import { DynamicValueWatcher } from './DynamicValueWatcher';
 
 export class ComponentDynamicValueListener {
-  propertyWatchClass: DynamicValueWatcher;
-  attributeWatchClass: DynamicValueWatcher;
-  traitsWatchClass: DynamicValueWatcher;
+  private propertyWatcher: DynamicValueWatcher;
+  private attributeWatcher: DynamicValueWatcher;
+  private traitsWatcher: DynamicValueWatcher;
 
   constructor(
     private component: Component,
     em: EditorModel,
   ) {
-    this.propertyWatchClass = new DynamicValueWatcher((key: string, value: any) => {
+    this.propertyWatcher = new DynamicValueWatcher(this.createPropertyUpdater(), em);
+    this.attributeWatcher = new DynamicValueWatcher(this.createAttributeUpdater(), em);
+    this.traitsWatcher = new DynamicValueWatcher(this.createTraitUpdater(), em);
+  }
+
+  private createPropertyUpdater() {
+    return (key: string, value: any) => {
       this.component.set(key, value, { skipWatcherUpdates: false });
-    }, em);
+    };
+  }
 
-    this.attributeWatchClass = new DynamicValueWatcher((key: string, value: any) => {
+  private createAttributeUpdater() {
+    return (key: string, value: any) => {
       this.component.setAttributes({ [key]: value }, { skipWatcherUpdates: false });
-    }, em);
+    };
+  }
 
-    this.traitsWatchClass = new DynamicValueWatcher((key: string, value: any) => {
+  private createTraitUpdater() {
+    return (key: string, value: any) => {
       this.component.updateTrait(key, { value });
       const trait = this.component.getTrait(key);
       trait.setTargetValue(value);
-    }, em);
+    };
   }
 
   static evaluateComponentDef(values: ObjectAny, em: EditorModel) {
@@ -60,54 +70,54 @@ export class ComponentDynamicValueListener {
   }
 
   watchProps(props: ObjectAny) {
-    this.propertyWatchClass.removeListeners(Object.keys(props));
-    this.propertyWatchClass.watchDynamicValue(props);
+    this.propertyWatcher.removeListeners(Object.keys(props));
+    this.propertyWatcher.watchDynamicValue(props);
   }
 
   getDynamicPropsDefs() {
-    return this.propertyWatchClass.getAllSerializableValues();
+    return this.propertyWatcher.getAllSerializableValues();
   }
 
   setAttributes(attributes: ObjectAny) {
-    this.attributeWatchClass.removeListeners();
-    this.attributeWatchClass.watchDynamicValue(attributes);
+    this.attributeWatcher.removeListeners();
+    this.attributeWatcher.watchDynamicValue(attributes);
   }
 
   watchAttributes(attributes: ObjectAny) {
-    this.attributeWatchClass.watchDynamicValue(attributes);
+    this.attributeWatcher.watchDynamicValue(attributes);
   }
 
   watchTraits(traits: (string | ObjectAny)[]) {
     const evaluatedTraits: { [key: string]: ObjectAny } = {};
+
     traits?.forEach((trait: any) => {
-      if (typeof trait === 'string' || !trait.name) {
-        return;
-      } else if (typeof trait === 'object') {
+      if (typeof trait === 'object' && trait.name) {
         evaluatedTraits[trait.name] = trait.value;
       }
     });
-    this.traitsWatchClass.watchDynamicValue(evaluatedTraits);
+
+    this.traitsWatcher.watchDynamicValue(evaluatedTraits);
   }
 
   removeAttributes(attributes: string[]) {
-    this.attributeWatchClass.removeListeners(attributes);
+    this.attributeWatcher.removeListeners(attributes);
   }
 
   getAttributesDefsOrValues(attributes: ObjectAny) {
-    return this.attributeWatchClass.getSerializableValues(attributes);
+    return this.attributeWatcher.getSerializableValues(attributes);
   }
 
   getTraitsDefs() {
-    return this.traitsWatchClass.getAllSerializableValues();
+    return this.traitsWatcher.getAllSerializableValues();
   }
 
   getPropsDefsOrValues(props: ObjectAny) {
-    return this.propertyWatchClass.getSerializableValues(props);
+    return this.propertyWatcher.getSerializableValues(props);
   }
 
   destroy() {
-    this.propertyWatchClass.removeListeners();
-    this.attributeWatchClass.removeListeners();
-    this.traitsWatchClass.removeListeners();
+    this.propertyWatcher.removeListeners();
+    this.attributeWatcher.removeListeners();
+    this.traitsWatcher.removeListeners();
   }
 }

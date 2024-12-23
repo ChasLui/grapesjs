@@ -78,7 +78,7 @@ describe('DataSource Serialization', () => {
       cmpRoot.append({
         tagName: 'input',
         content: dataVariable,
-        customProp: dataVariable
+        customProp: dataVariable,
       })[0];
 
       const projectData = editor.getProjectData();
@@ -176,7 +176,7 @@ describe('DataSource Serialization', () => {
         expect.objectContaining({
           name: 'value',
           value: dataVariable,
-        })
+        }),
       );
       expect(component.attributes).toEqual({
         value: 'test-value',
@@ -384,14 +384,16 @@ describe('DataSource Serialization', () => {
                 component: {
                   components: [
                     {
-                      [dynamicAttrKey]: [{
-                        name: 'value',
-                        value: {
-                          path: 'test-input.id1.value',
-                          type: 'data-variable',
-                          defaultValue: 'default',
+                      [dynamicAttrKey]: [
+                        {
+                          name: 'value',
+                          value: {
+                            path: 'test-input.id1.value',
+                            type: 'data-variable',
+                            defaultValue: 'default',
+                          },
                         },
-                      }],
+                      ],
                       tagName: 'input',
                       void: true,
                     },
