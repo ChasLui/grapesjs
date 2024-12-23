@@ -2,13 +2,14 @@ import Backbone from 'backbone';
 import { HTMLParserOptions } from '../parser/config/config';
 export { default as $ } from '../utils/cash-dom';
 
-interface NOOP {}
+interface NOOP { }
 
 export const collectionEvents = 'add remove reset change';
 
 export type Debounced = Function & { cancel(): void };
 
 export type SetOptions = Backbone.ModelSetOptions & {
+  unset?: boolean;
   avoidStore?: boolean;
   avoidTransformers?: boolean;
   partial?: boolean;
@@ -61,7 +62,7 @@ export interface Dimensions {
   width: number;
 }
 
-export interface BoxRect extends Coordinates, Dimensions {}
+export interface BoxRect extends Coordinates, Dimensions { }
 
 export type ElementRect = {
   top: number;
@@ -76,13 +77,13 @@ export type CombinedModelConstructorOptions<
 > = Backbone.ModelConstructorOptions<M> & E;
 
 export interface ViewOptions<TModel extends Model | undefined = Model, TElement extends Element = HTMLElement>
-  extends Backbone.ViewOptions<TModel, TElement> {}
+  extends Backbone.ViewOptions<TModel, TElement> { }
 
-export class Model<T extends ObjectHash = any, S = SetOptions, E = any> extends Backbone.Model<T, S, E> {}
+export class Model<T extends ObjectHash = any, S = SetOptions, E = any> extends Backbone.Model<T, S, E> { }
 
-export class Collection<T extends Model = Model> extends Backbone.Collection<T> {}
+export class Collection<T extends Model = Model> extends Backbone.Collection<T> { }
 
-export class View<T extends Model | undefined = Model, E extends Element = HTMLElement> extends Backbone.View<T, E> {}
+export class View<T extends Model | undefined = Model, E extends Element = HTMLElement> extends Backbone.View<T, E> { }
 
 export type PickMatching<T, V> = { [K in keyof T as T[K] extends V ? K : never]: T[K] };
 
