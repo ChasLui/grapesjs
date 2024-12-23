@@ -1573,21 +1573,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
     let obj = Model.prototype.toJSON.call(this, opts);
     obj = { ...obj, ...this.componentDVListener.getDynamicPropsDefs() };
     obj.attributes = this.componentDVListener.getAttributesDefsOrValues(this.getAttributes({ noClass: true }));
-    const dynamicTraitsObj = this.componentDVListener.getTraitsDefs();
-    const keys = Object.keys(dynamicTraitsObj);
-    const serializedTraits: ObjectAny[] = [];
-    keys.forEach((key) => {
-      const traitJSON = this.getTrait(key).toJSON();
-      const traitValue = dynamicTraitsObj[key];
-      serializedTraits.push({
-        ...traitJSON,
-        name: key,
-        value: traitValue,
-      });
-    });
-    if (serializedTraits.length > 0) {
-      obj[dynamicAttrKey] = serializedTraits;
-    }
+    obj[dynamicAttrKey] = this.serializeDynamicTraits();
     delete obj.componentDVListener;
     delete obj.traits;
     delete obj.attributes.class;
@@ -1613,6 +1599,26 @@ export default class Component extends StyleableModel<ComponentProperties> {
     }
 
     return obj;
+  }
+
+  /**
+   * Serialize dynamic traits into an array of objects with name and value.
+   * @return {ObjectAny[]}
+   * @private
+   */
+  private serializeDynamicTraits(): ObjectAny[] | undefined {
+    const dynamicTraitsObj = this.componentDVListener.getTraitsDefs();
+    const keys = Object.entries(dynamicTraitsObj);
+    if (keys.length === 0) return undefined;
+
+    return keys.map(([key, value]) => {
+      const traitJSON = this.getTrait(key).toJSON();
+      return {
+        ...traitJSON,
+        name: key,
+        value,
+      };
+    });
   }
 
   /**
