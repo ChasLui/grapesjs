@@ -176,9 +176,6 @@ describe('TraitConditionalVariable', () => {
               component: {
                 components: [
                   {
-                    attributes: {
-                      dynamicTrait: 'Default',
-                    },
                     [dynamicAttrKey]: [{
                       name: 'dynamicTrait',
                       value: {
