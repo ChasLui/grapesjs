@@ -126,13 +126,26 @@ exports[`DataSource Serialization .getProjectData TraitDataVariable 1`] = `
                 "attributes": {
                   "value": "test-value",
                 },
-                "attributes-dynamic-value": {
-                  "value": {
-                    "defaultValue": "default",
-                    "path": "test-input.id1.value",
-                    "type": "data-variable",
+                "attributes-dynamic-value": [
+                  {
+                    "category": "",
+                    "changeProp": false,
+                    "default": "",
+                    "id": "data-variable-id",
+                    "label": "Value",
+                    "name": "value",
+                    "options": [],
+                    "placeholder": "",
+                    "step": 1,
+                    "type": "text",
+                    "unit": "",
+                    "value": {
+                      "defaultValue": "default",
+                      "path": "test-input.id1.value",
+                      "type": "data-variable",
+                    },
                   },
-                },
+                ],
                 "tagName": "input",
                 "void": true,
               },
