@@ -176,18 +176,20 @@ describe('TraitConditionalVariable', () => {
               component: {
                 components: [
                   {
-                    [dynamicAttrKey]: [{
-                      name: 'dynamicTrait',
-                      value: {
-                        condition: {
-                          left: 0,
-                          operator: '>',
-                          right: -1,
+                    [dynamicAttrKey]: [
+                      {
+                        name: 'dynamicTrait',
+                        value: {
+                          condition: {
+                            left: 0,
+                            operator: '>',
+                            right: -1,
+                          },
+                          ifTrue: 'Positive',
+                          type: 'conditional-variable',
                         },
-                        ifTrue: 'Positive',
-                        type: 'conditional-variable',
                       },
-                    }],
+                    ],
                     type: 'text',
                   },
                 ],

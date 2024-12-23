@@ -35,20 +35,18 @@ export class ComponentDynamicValueListener {
     }
 
     if (Array.isArray(values[dynamicAttrKey]) && values[dynamicAttrKey].length > 0) {
-      values.traits = values.traits
-        ? [...values[dynamicAttrKey], ...values.traits]
-        : values[dynamicAttrKey];
+      values.traits = values.traits ? [...values[dynamicAttrKey], ...values.traits] : values[dynamicAttrKey];
     }
 
     if (values.traits) {
       const evaluatedTraitsValues = DynamicValueWatcher.getStaticValues(
         values.traits.map((trait: any) => trait.value),
-        em
+        em,
       );
 
       props.traits = values.traits.map((trait: any, index: number) => ({
         ...trait,
-        value: evaluatedTraitsValues[index]
+        value: evaluatedTraitsValues[index],
       }));
     }
 
@@ -80,7 +78,7 @@ export class ComponentDynamicValueListener {
   }
 
   watchTraits(traits: (string | ObjectAny)[]) {
-    const evaluatedTraits: { [key: string]: ObjectAny } = {}
+    const evaluatedTraits: { [key: string]: ObjectAny } = {};
     traits?.forEach((trait: any) => {
       if (typeof trait === 'string' || !trait.name) {
         return;
