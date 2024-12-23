@@ -337,33 +337,34 @@ export default class Component extends StyleableModel<ComponentProperties> {
     }
   }
 
-  set<A extends string>(attributeName: A, value?: ComponentProperties[A], options?: ComponentSetOptions): this;
-  set(attributeName: Partial<ComponentProperties>, options?: ComponentSetOptions): this;
   set<A extends string>(
-    attributeName: Partial<ComponentProperties> | A,
-    value?: SetOptions | ComponentProperties[A],
+    keyOrAttributes: A | Partial<ComponentProperties>,
+    valueOrOptions?: ComponentProperties[A] | SetOptions,
     options?: ComponentSetOptions,
   ): this;
+
   set<A extends string>(
-    attributeName: Partial<ComponentProperties> | A,
-    value?: SetOptions | ComponentProperties[A],
+    keyOrAttributes: A | Partial<ComponentProperties>,
+    valueOrOptions?: ComponentProperties[A] | SetOptions,
     options: ComponentSetOptions = { skipWatcherUpdates: false },
   ): this {
-    const props =
-      typeof attributeName === 'object'
-        ? attributeName
-        : typeof attributeName === 'string'
-          ? { [attributeName as string]: value }
+    const attributes =
+      typeof keyOrAttributes === 'object'
+        ? keyOrAttributes
+        : typeof keyOrAttributes === 'string'
+          ? { [keyOrAttributes as string]: valueOrOptions }
           : {};
-    const areStaticAttributes = DynamicValueWatcher.areStaticValues(props);
-    const evaluatedProps = areStaticAttributes
-      ? props
-      : ComponentDynamicValueListener.evaluateComponentDef(props, this.em);
+
+    const areStaticAttributes = DynamicValueWatcher.areStaticValues(attributes);
+    const evaluatedAttributes = areStaticAttributes
+      ? attributes
+      : ComponentDynamicValueListener.evaluateComponentDef(attributes, this.em);
+
     if (!options.skipWatcherUpdates) {
-      this.componentDVListener?.watchProps(props);
+      this.componentDVListener?.watchProps(attributes);
     }
 
-    return super.set(evaluatedProps, options);
+    return super.set(evaluatedAttributes, options);
   }
 
   __postAdd(opts: { recursive?: boolean } = {}) {

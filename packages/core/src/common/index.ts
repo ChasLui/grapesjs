@@ -9,7 +9,6 @@ export const collectionEvents = 'add remove reset change';
 export type Debounced = Function & { cancel(): void };
 
 export type SetOptions = Backbone.ModelSetOptions & {
-  unset?: boolean;
   avoidStore?: boolean;
   avoidTransformers?: boolean;
   partial?: boolean;
