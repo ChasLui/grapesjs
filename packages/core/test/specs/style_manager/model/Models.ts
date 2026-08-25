@@ -111,6 +111,67 @@ describe('Sector', () => {
     expect(propTop.get('name')).toEqual('Top');
     expect(propTop.get('type')).toEqual('number');
   });
+
+  test('Extend nested properties on extended composite properties', () => {
+    obj = sm.addSector('test', {
+      name: 'test',
+      properties: [
+        {
+          extend: 'border-radius',
+          // @ts-ignore
+          properties: [
+            {
+              extend: 'border-top-left-radius',
+              id: 'border-top-left-radius-custom',
+            },
+            {
+              extend: 'border-bottom-left-radius',
+            },
+          ],
+        },
+      ],
+    });
+    const prop0 = obj.getProperties()[0];
+    const propProps = prop0.get('properties' as any);
+
+    expect(propProps.length).toEqual(2);
+    expect(propProps.at(0).get('id')).toEqual('border-top-left-radius-custom');
+    expect(propProps.at(0).get('type')).toEqual('number');
+    expect(propProps.at(1).get('property')).toEqual('border-bottom-left-radius');
+    expect(propProps.at(1).get('type')).toEqual('number');
+  });
+
+  test('Extend nested properties on stack properties', () => {
+    obj = sm.addSector('test', {
+      name: 'test',
+      properties: [
+        {
+          type: 'stack',
+          property: 'my-shadow',
+          // @ts-ignore
+          properties: [
+            {
+              extend: 'text-shadow-h',
+              property: 'my-shadow-h',
+            },
+            {
+              extend: 'text-shadow-v',
+              property: 'my-shadow-v',
+            },
+          ],
+        },
+      ],
+    });
+    const prop0 = obj.getProperties()[0];
+    const propProps = prop0.get('properties' as any);
+
+    expect(propProps.length).toEqual(2);
+    expect(propProps.at(0).get('property')).toEqual('my-shadow-h');
+    expect(propProps.at(0).get('type')).toEqual('number');
+    expect(propProps.at(0).get('units')).toEqual(['px', 'em', 'rem', 'vh', 'vw']);
+    expect(propProps.at(1).get('property')).toEqual('my-shadow-v');
+    expect(propProps.at(1).get('type')).toEqual('number');
+  });
 });
 
 describe('Property', () => {
@@ -188,5 +249,41 @@ describe('PropertyNumber', () => {
     const result = { value: 100, unit: 'px' };
     expect(obj.parseValue('200px')).toEqual(result);
     expect(obj.parseValue('95px')).toEqual({ value: 95, unit: 'px' });
+  });
+
+  test('supports per-property parseValue overrides', () => {
+    obj = new PropertyNumber({
+      units: ['px'],
+      property: 'width',
+      parseValue: ({ value, parse }) => (value.startsWith('var(--') ? { value, unit: '' } : parse()),
+    });
+
+    expect(obj.__parseValue('var(--size)', {})).toEqual({ value: 'var(--size)', unit: '' });
+    expect(obj.__parseValue('20px', {})).toEqual({ value: 20, unit: 'px' });
+  });
+
+  test('supports global styleManager parseValue overrides', () => {
+    const em = new Editor({
+      styleManager: {
+        parseValue: ({ value, parse }) => (value.startsWith('var(--') ? { value, unit: '' } : parse()),
+      },
+    });
+    const sm = em.Styles;
+    sm.onLoad();
+    sm.addSector('test', {
+      name: 'Test',
+      properties: [{ type: 'number', property: 'width', units: ['px'] }],
+    });
+    obj = sm.getProperty('test', 'width') as PropertyNumber;
+
+    obj.upValue('var(--size)', { noTarget: true });
+    expect(obj.get('value')).toEqual('var(--size)');
+    expect(obj.get('unit')).toEqual('');
+
+    obj.upValue('20px', { noTarget: true });
+    expect(obj.get('value')).toEqual(20);
+    expect(obj.get('unit')).toEqual('px');
+
+    em.destroy();
   });
 });

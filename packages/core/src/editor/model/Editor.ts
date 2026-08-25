@@ -32,6 +32,7 @@ import CodeManagerModule from '../../code_manager';
 import UndoManagerModule from '../../undo_manager';
 import RichTextEditorModule from '../../rich_text_editor';
 import CommandsModule from '../../commands';
+import PluginManager from '../../plugin_manager';
 import StyleManager from '../../style_manager';
 import CssRule from '../../css_composer/model/CssRule';
 import { HTMLGeneratorBuildOptions } from '../../code_manager/model/HtmlGenerator';
@@ -68,6 +69,7 @@ const deps: (new (em: EditorModel) => IModule)[] = [
   LayerManager,
   CanvasModule,
   CommandsModule,
+  PluginManager,
   BlockManager,
   DataSourceManager,
 ];
@@ -157,6 +159,10 @@ export default class EditorModel extends Model {
 
   get Commands(): CommandsModule {
     return this.get('Commands');
+  }
+
+  get Plugins(): PluginManager {
+    return this.get('PluginManager');
   }
 
   get Keymaps(): KeymapsModule {
@@ -903,11 +909,14 @@ export default class EditorModel extends Model {
       this.clearDirtyCount();
     }, 1);
     const data = this.storeData();
-    await this.Storage.store(data, options);
-    setTimeout(() => {
-      this._isStoring = false;
-    }, 1);
-    return data;
+    try {
+      await this.Storage.store(data, options);
+      return data;
+    } finally {
+      setTimeout(() => {
+        this._isStoring = false;
+      }, 1);
+    }
   }
 
   /**
@@ -971,10 +980,14 @@ export default class EditorModel extends Model {
    * @private
    */
   runDefault(opts = {}) {
-    const command = this.Commands.get(this.config.defaultCommand!);
+    const { Commands, config } = this;
+    const defCmd = config.defaultCommand!;
+    const command = Commands.get(defCmd);
+
     if (!command || this.defaultRunning) return;
-    command.stop!(this as any, this, opts);
-    command.run!(this as any, this, opts);
+
+    Commands.stop(defCmd, opts);
+    Commands.run(defCmd, opts);
     this.defaultRunning = true;
   }
 
@@ -984,11 +997,13 @@ export default class EditorModel extends Model {
    * @private
    */
   stopDefault(opts = {}) {
-    const commands = this.Commands;
-    if (!commands) return;
-    const command = commands.get(this.config.defaultCommand!);
+    const { Commands, config } = this;
+    const defCmd = config.defaultCommand!;
+    const command = Commands?.get(defCmd);
+
     if (!command || !this.defaultRunning) return;
-    command.stop!(this as any, this, opts);
+
+    Commands.stop(defCmd, opts);
     this.defaultRunning = false;
   }
 

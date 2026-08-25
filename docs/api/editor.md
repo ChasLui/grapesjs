@@ -176,6 +176,7 @@ Returns CSS built inside canvas
     *   `opts.onlyMatched` **[Boolean][17]** Return only rules matched by the passed component. (optional, default `false`)
     *   `opts.keepUnusedStyles` **[Boolean][17]** Force keep all defined rules. Toggle on in case output looks different inside/outside of the editor. (optional, default `false`)
     *   `opts.allowEmpty` **[Boolean][17]** Include rules with empty style declarations. (optional, default `false`)
+    *   `opts.withNested` **[Boolean][17]** Include nested CSS rules. (optional, default `false`)
 
 Returns **([String][18] | [Array][19]\<CssRule>)** CSS string or array of CssRules
 
@@ -443,7 +444,8 @@ Execute command
 ### Parameters
 
 *   `id` **[string][18]** Command ID
-*   `options` **[Object][16]** Custom options (optional, default `{}`)
+*   `args` **...CommandRunArgs\<TId>**&#x20;
+*   `options` **[Object][16]** Custom options
 
 ### Examples
 
@@ -460,7 +462,8 @@ Stop the command if stop method was provided
 ### Parameters
 
 *   `id` **[string][18]** Command ID
-*   `options` **[Object][16]** Custom options (optional, default `{}`)
+*   `args` **...CommandStopArgs\<TId>**&#x20;
+*   `options` **[Object][16]** Custom options
 
 ### Examples
 

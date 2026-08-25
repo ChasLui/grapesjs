@@ -48,6 +48,7 @@ import BlockManager from '../block_manager';
 import CanvasModule from '../canvas';
 import CodeManagerModule from '../code_manager';
 import CommandsModule from '../commands';
+import type { CommandRunArgs, CommandRunResult, CommandStopArgs, CommandStopResult } from '../commands/registry';
 import { AddOptions, EventHandler } from '../common';
 import CssComposer from '../css_composer';
 import CssRule from '../css_composer/model/CssRule';
@@ -66,6 +67,7 @@ import ModalModule from '../modal_dialog';
 import LayerManager from '../navigator';
 import PageManager from '../pages';
 import PanelManager from '../panels';
+import PluginManager from '../plugin_manager';
 import ParserModule from '../parser';
 import { CustomParserCss } from '../parser/config/config';
 import RichTextEditorModule from '../rich_text_editor';
@@ -130,6 +132,9 @@ export default class Editor implements IBaseModule<EditorConfig> {
   }
   get Commands(): CommandsModule {
     return this.em.Commands;
+  }
+  get Plugins(): PluginManager {
+    return this.em.Plugins;
   }
   get Keymaps(): KeymapsModule {
     return this.em.Keymaps;
@@ -257,6 +262,7 @@ export default class Editor implements IBaseModule<EditorConfig> {
    * @param {Boolean} [opts.onlyMatched=false] Return only rules matched by the passed component.
    * @param {Boolean} [opts.keepUnusedStyles=false] Force keep all defined rules. Toggle on in case output looks different inside/outside of the editor.
    * @param {Boolean} [opts.allowEmpty=false] Include rules with empty style declarations.
+   * @param {Boolean} [opts.withNested=false] Include nested CSS rules.
    * @returns {String|Array<CssRule>} CSS string or array of CssRules
    */
   getCss(opts?: EditorModelParam<'getCss', 0>) {
@@ -497,8 +503,8 @@ export default class Editor implements IBaseModule<EditorConfig> {
    * @example
    * editor.runCommand('myCommand', {someValue: 1});
    */
-  runCommand(id: string, options: Record<string, unknown> = {}) {
-    return this.Commands.run(id, options);
+  runCommand<const TId extends string>(id: TId, ...args: CommandRunArgs<TId>): CommandRunResult<TId> {
+    return this.Commands.run(id, ...(args as any)) as CommandRunResult<TId>;
   }
 
   /**
@@ -509,8 +515,8 @@ export default class Editor implements IBaseModule<EditorConfig> {
    * @example
    * editor.stopCommand('myCommand', {someValue: 1});
    */
-  stopCommand(id: string, options: Record<string, unknown> = {}) {
-    return this.Commands.stop(id, options);
+  stopCommand<const TId extends string>(id: TId, ...args: CommandStopArgs<TId>): CommandStopResult<TId> {
+    return this.Commands.stop(id, ...(args as any)) as CommandStopResult<TId>;
   }
 
   /**

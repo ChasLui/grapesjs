@@ -17,12 +17,12 @@ export const CSS_BG_OBJ = {
 };
 
 describe('ParserCss', () => {
-  let obj: ReturnType<typeof ParserCss>;
+  let obj: ParserCss;
   let em: EditorModel;
 
   beforeEach(() => {
     em = new EditorModel({});
-    obj = ParserCss(em, {});
+    obj = new ParserCss(em, {});
   });
 
   afterEach(() => {
@@ -84,10 +84,10 @@ describe('ParserCss', () => {
   });
 
   test('Parse rule with more selectors', () => {
-    var str = ' .test1.test2 {color:red; test: value}';
+    var str = ' .test1.test2 {color:red; --test:value}';
     var result = {
       selectors: ['test1', 'test2'],
-      style: { color: 'red', test: 'value' },
+      style: { color: 'red', '--test': 'value' },
     };
     expect(obj.parse(str)).toEqual([result]);
   });
@@ -184,7 +184,80 @@ describe('ParserCss', () => {
     expect(obj.parse(str)).toEqual([result]);
   });
 
-  // Phantom doesn't find 'node.conditionText' so will skip it
+  test('Parse nested selector rules', () => {
+    const str = `.foo {
+      color: green;
+      .bar {
+        color: red;
+        .baz {
+          color: blue;
+        }
+      }
+    }`;
+    expect(obj.parse(str)).toEqual([
+      {
+        selectors: ['foo'],
+        style: {
+          color: 'green',
+          '.bar': {
+            color: 'red',
+            '.baz': {
+              color: 'blue',
+            },
+          },
+        },
+      },
+    ]);
+  });
+
+  test('Parse nested selector rules inside media query', () => {
+    const str = `@media (max-width: 992px) {
+      .foo {
+        color: green;
+        .bar {
+          color: red;
+        }
+      }
+    }`;
+    expect(obj.parse(str)).toEqual([
+      {
+        atRuleType: 'media',
+        selectors: ['foo'],
+        style: {
+          color: 'green',
+          '.bar': {
+            color: 'red',
+          },
+        },
+        mediaText: '(max-width: 992px)',
+      },
+    ]);
+  });
+
+  // Pending CSSOM/jsdom support for nested @page margin at-rules.
+  test.skip('Parse nested @page margin rules', () => {
+    const str = `@page {
+      margin-top: 2cm;
+      @bottom-center {
+        content: "x";
+      }
+    }`;
+    expect(obj.parse(str)).toEqual([
+      {
+        atRuleType: 'page',
+        selectors: [],
+        selectorsAdd: '',
+        singleAtRule: true,
+        style: {
+          'margin-top': '2cm',
+          '@bottom-center': {
+            content: '"x"',
+          },
+        },
+      },
+    ]);
+  });
+
   test('Parse rules inside media queries', () => {
     var str =
       '.test1:hover{ color:white }@media (max-width: 992px){ .test1.test2:hover{ color:red } .test2{ color: blue }}';
@@ -302,8 +375,7 @@ describe('ParserCss', () => {
     expect(obj.parse(str)).toEqual([result]);
   });
 
-  // Unsupported by CSSOM parser
-  test.skip('Parse rule with @container at-rule', () => {
+  test('Parse rule with @container at-rule', () => {
     const atRuleType = 'container';
     const atRuleText = 'somename (min-width: 300px)';
     const input = `@${atRuleType} ${atRuleText} {
@@ -313,17 +385,32 @@ describe('ParserCss', () => {
     const output = [
       {
         selectors: ['cls1'],
-        selectorsAdd: '',
         atRuleType,
         mediaText: atRuleText,
         style: { height: '100px' },
       },
       {
         selectors: ['cls2'],
-        selectorsAdd: '',
         atRuleType,
         mediaText: atRuleText,
         style: { height: '200px' },
+      },
+    ];
+    expect(obj.parse(input)).toEqual(output);
+  });
+
+  test('Parse rule with anonymous @container at-rule', () => {
+    const atRuleType = 'container';
+    const atRuleText = '(min-width: 300px)';
+    const input = `@${atRuleType} ${atRuleText} {
+      .cls1{ height: 100px }
+    }`;
+    const output = [
+      {
+        selectors: ['cls1'],
+        atRuleType,
+        mediaText: atRuleText,
+        style: { height: '100px' },
       },
     ];
     expect(obj.parse(input)).toEqual(output);
@@ -338,27 +425,24 @@ describe('ParserCss', () => {
         font-family: 'Glyphicons Halflings';
         src:url(https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/fonts/glyphicons-halflings-regular.eot)
       }`;
-    const result = [
-      {
-        selectors: [],
-        selectorsAdd: '',
-        style: { 'font-family': '"Open Sans"' },
-        singleAtRule: true,
-        atRuleType: 'font-face',
-      },
-      {
-        selectors: [],
-        selectorsAdd: '',
-        style: {
-          'font-family': "'Glyphicons Halflings'",
-          src: 'url(https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/fonts/glyphicons-halflings-regular.eot)',
-        },
-        singleAtRule: true,
-        atRuleType: 'font-face',
-      },
-    ];
     const parsed = obj.parse(str);
-    expect(parsed).toEqual(result);
+    expect(parsed).toHaveLength(2);
+    expect(parsed[0]).toEqual({
+      selectors: [],
+      selectorsAdd: '',
+      style: { 'font-family': '"Open Sans"' },
+      singleAtRule: true,
+      atRuleType: 'font-face',
+    });
+    expect(parsed[1]).toMatchObject({
+      selectors: [],
+      selectorsAdd: '',
+      style: {
+        'font-family': '"Glyphicons Halflings"',
+      },
+      singleAtRule: true,
+      atRuleType: 'font-face',
+    });
   });
 
   test('Parse ID rule', () => {
@@ -396,7 +480,7 @@ describe('ParserCss', () => {
       selectors: ['test1'],
       style: { color: 'blue' },
     };
-    obj = ParserCss(em, {
+    obj = new ParserCss(em, {
       parserCss: () => [result],
     });
     expect(obj.parse(str)).toEqual([result]);

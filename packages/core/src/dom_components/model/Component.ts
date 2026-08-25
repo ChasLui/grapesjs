@@ -25,6 +25,7 @@ import StyleableModel, {
 } from '../../domain_abstract/model/StyleableModel';
 import EditorModel from '../../editor/model/Editor';
 import ItemView from '../../navigator/view/ItemView';
+import { ParsedNode } from '../../parser/types';
 import Selector from '../../selector_manager/model/Selector';
 import Selectors from '../../selector_manager/model/Selectors';
 import Trait from '../../trait_manager/model/Trait';
@@ -61,6 +62,8 @@ import {
   ComponentAdd,
   ComponentDefinition,
   ComponentDefinitionDefined,
+  ComponentFindOptions,
+  ComponentMatcher,
   ComponentOptions,
   ComponentProperties,
   DragMode,
@@ -78,6 +81,11 @@ export interface CheckIdOptions {
   updatedIds?: Record<string, ComponentDefinitionDefined[]>;
 }
 
+const getComponentMatcher = (query: ComponentMatcher) => (isString(query) ? (cmp: Component) => cmp.is(query) : query);
+
+const getComponentFindMax = ({ max }: ComponentFindOptions = {}) =>
+  typeof max === 'number' && isFinite(max) && max > 0 ? Math.max(1, Math.floor(max)) : undefined;
+
 const escapeRegExp = (str: string) => {
   return str.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&');
 };
@@ -94,6 +102,8 @@ export const keyUpdateInside = ComponentsEvents.updateInside;
 type GetComponentStyleOpts = GetStyleOpts & {
   inline?: boolean;
 };
+
+const idsMapCounter = Symbol('idsMapCounter');
 
 /**
  * The Component object represents a single node of our template structure, so when you update its properties the changes are
@@ -412,11 +422,17 @@ export default class Component extends StyleableModel<ComponentProperties> {
     const { em } = this;
     const um = em?.UndoManager;
     const comps = this.components();
-    if (um && !this.__hasUm) {
+
+    if (!um || this.__hasUm) {
+      return;
+    }
+
+    if (um) {
       um.add(comps);
       um.add(this.getSelectors());
       this.__hasUm = true;
     }
+
     opts.recursive && comps.map((c) => c.__postAdd(opts));
   }
 
@@ -611,19 +627,40 @@ export default class Component extends StyleableModel<ComponentProperties> {
    * Find all inner components by component type.
    * The advantage of this method over `find` is that you can use it
    * also before rendering the component
-   * @param {String} type Component type
+   * @param {String|Function} query Component type or matcher function
+   * @param {Object} [opts={}] Search options
+   * @param {Number} [opts.max] Maximum number of matches before exiting
    * @returns {Array<Component>}
    * @example
    * const allImages = component.findType('image');
    * console.log(allImages[0]) // prints the first found component
+   * const someComponents = component.findType((cmp) => cmp.getType() === 'something', { max: 2 });
    */
-  findType(type: string) {
+  findType(query: ComponentMatcher, opts: ComponentFindOptions = {}) {
     const result: Component[] = [];
-    const find = (components: Components) =>
-      components.forEach((item) => {
-        item.is(type) && result.push(item);
-        find(item.components());
-      });
+    const matcher = getComponentMatcher(query);
+    const max = getComponentFindMax(opts);
+    const find = (components: Components) => {
+      const { models } = components;
+
+      for (let i = 0; i < models.length; i++) {
+        const item = models[i];
+        if (matcher(item)) {
+          result.push(item);
+
+          if (max && result.length >= max) {
+            return true;
+          }
+        }
+
+        if (find(item.components())) {
+          return true;
+        }
+      }
+
+      return false;
+    };
+
     find(this.components());
     return result;
   }
@@ -631,16 +668,17 @@ export default class Component extends StyleableModel<ComponentProperties> {
   /**
    * Find the first inner component by component type.
    * If no component is found, it returns `undefined`.
-   * @param {String} type Component type
+   * @param {String|Function} query Component type or matcher function
    * @returns {Component|undefined}
    * @example
    * const image = component.findFirstType('image');
    * if (image) {
    *  console.log(image);
    * }
+   * const firstImage = component.findFirstType((cmp) => cmp.is('image'));
    */
-  findFirstType(type: string): Component | undefined {
-    return this.findType(type).at(0);
+  findFirstType(query: ComponentMatcher): Component | undefined {
+    return this.findType(query, { max: 1 }).at(0);
   }
 
   /**
@@ -661,16 +699,18 @@ export default class Component extends StyleableModel<ComponentProperties> {
    * Find the closest parent component by its type.
    * The advantage of this method over `closest` is that you can use it
    * also before rendering the component
-   * @param {String} type Component type
+   * @param {String|Function} query Component type or matcher function
    * @returns {Component} Found component, otherwise `undefined`
    * @example
    * const Section = component.closestType('section');
    * console.log(Section);
+   * const namedSection = component.closestType((cmp) => cmp.getName() === 'Section');
    */
-  closestType(type: string) {
+  closestType(query: ComponentMatcher) {
+    const matcher = getComponentMatcher(query);
     let parent = this.parent();
 
-    while (parent && !parent.is(type)) {
+    while (parent && !matcher(parent)) {
       parent = parent.parent();
     }
 
@@ -985,7 +1025,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
    * Returns component's classes as an array of strings
    * @return {Array}
    */
-  getClasses() {
+  getClasses(): string[] {
     const attr = this.getAttributes();
     const classStr = attr.class;
     return classStr ? classStr.split(' ') : [];
@@ -1386,17 +1426,14 @@ export default class Component extends StyleableModel<ComponentProperties> {
    * Override original clone method
    * @private
    * @ts-ignore */
-  clone(opt: { symbol?: boolean; symbolInv?: boolean } = {}): this {
+  clone(opt: { symbol?: boolean; symbolInv?: boolean; frame?: Frame } = {}): this {
     const em = this.em;
     const attr = this.dataResolverWatchers.getProps(this.attributes);
-    const opts = { ...this.opt };
+    const opts = { ...this.opt, frame: opt.frame ?? undefined };
     const id = this.getId();
     const cssc = em?.Css;
-    // @ts-ignore
     attr.components = [];
-    // @ts-ignore
     attr.classes = [];
-    // @ts-ignore
     attr.traits = [];
 
     if (isSymbolRoot(this)) {
@@ -1408,11 +1445,9 @@ export default class Component extends StyleableModel<ComponentProperties> {
       attr.components[i] = md.clone({ ...opt, _inner: 1 });
     });
     this.get('traits')!.each((md, i) => {
-      // @ts-ignore
       attr.traits[i] = md.clone();
     });
     this.get('classes')!.each((md, i) => {
-      // @ts-ignore
       attr.classes[i] = md.get('name');
     });
 
@@ -1480,7 +1515,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
    * @param {Boolean} [opts.noCustom] Avoid custom name assigned to the component.
    * @returns {String}
    * */
-  getName(opts: { noCustom?: boolean } = {}) {
+  getName(opts: { noCustom?: boolean } = {}): string {
     const { em } = this;
     const { type, tagName, name } = this.attributes;
     const defName = type || tagName;
@@ -1754,14 +1789,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
    * @return {ComponentView}
    */
   getView(frame?: Frame) {
-    let { view, views, em } = this;
-    const frm = frame || em?.getCurrentFrameModel();
-
-    if (frm) {
-      view = views.filter((view) => view.frameView === frm.view)[0];
-    }
-
-    return view;
+    return super.getView(frame) as ComponentView | undefined;
   }
 
   getCurrentView() {
@@ -2056,6 +2084,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
   }
 
   static typeExtends = new Set<string>();
+  static isParsedNode?: (node: ParsedNode, opts?: any) => ComponentDefinitionDefined | boolean | undefined;
 
   static getDefaults() {
     return result(this.prototype, 'defaults');
@@ -2072,7 +2101,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
     const current = list[id];
 
     if (!current) {
-      list[id] = model;
+      Component.setListId(list, id, model);
     } else if (current !== model) {
       const keepIdsCrossPages = model.em?.Components.config.keepAttributeIdsCrossPages;
       const currentPage = current.page;
@@ -2132,12 +2161,12 @@ export default class Component extends StyleableModel<ComponentProperties> {
       idMap[currentId] = nextId;
     }
 
-    list[nextId] = model;
+    Component.setListId(list, nextId, model);
     return nextId;
   }
 
   static getNewId(list: ObjectAny) {
-    const count = Object.keys(list).length;
+    const count = Component.getListCount(list);
     const ilen = count.toString().length + 2;
     const uid = (Math.random() + 1.1).toString(36).slice(-ilen);
     let newId = `i${uid}`;
@@ -2147,6 +2176,31 @@ export default class Component extends StyleableModel<ComponentProperties> {
     }
 
     return newId;
+  }
+
+  static getListCount(list: ObjectAny) {
+    const listWithCounter = list as ObjectAny & { [idsMapCounter]?: number };
+    let count = listWithCounter[idsMapCounter];
+
+    if (isUndefined(count)) {
+      count = Object.keys(list).length;
+      Object.defineProperty(list, idsMapCounter, {
+        configurable: true,
+        writable: true,
+        value: count,
+      });
+    }
+
+    return count;
+  }
+
+  static setListId(list: ObjectAny, id: string, model: Component) {
+    if (!list[id]) {
+      const listWithCounter = list as ObjectAny & { [idsMapCounter]?: number };
+      listWithCounter[idsMapCounter] = Component.getListCount(list) + 1;
+    }
+
+    list[id] = model;
   }
 
   static getIncrementId(id: string, list: ObjectAny, opts: { keepIds?: string[] } = {}) {
